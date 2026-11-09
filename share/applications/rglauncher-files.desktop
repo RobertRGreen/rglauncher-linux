@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Files
+GenericName=Files
+Comment=Browse files with Thunar
+Exec=rglauncher files %U
+TryExec=rglauncher
+Icon=aether-folder
+Terminal=false
+StartupNotify=false
+Categories=System;FileTools;FileManager;
+Keywords=RGLauncher;Aether;
+MimeType=inode/directory;

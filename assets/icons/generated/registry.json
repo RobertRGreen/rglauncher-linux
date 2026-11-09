@@ -1,0 +1,2792 @@
+{
+  "family": "Instrument/Score Aether",
+  "version": "0.1.0",
+  "theme_id": "aether-score",
+  "view_box": [
+    0,
+    0,
+    24,
+    24
+  ],
+  "symbolic_stroke_units": 2,
+  "full_color_optical_stroke_units": {
+    "16": 2.1,
+    "24": 1.8,
+    "32": 1.5,
+    "48": 1.15,
+    "scalable_object": 0.65,
+    "scalable_action": 1.8
+  },
+  "symbolic_construction": "Native Qt vector stroke outlines, currentColor fills; no raster tracing.",
+  "outline_tool_result": "89 symbolic SVGs outlined natively",
+  "license": "MIT",
+  "provenance": "Original project-authored paths; no upstream paths or app logos imported.",
+  "icons": [
+    {
+      "id": "aether-library",
+      "label": "Application library",
+      "context": "actions",
+      "aliases": [
+        "view-app-grid",
+        "applications-all"
+      ],
+      "meaning": "All applications; not current selection count",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-library.svg",
+        "color-light": "color-light/actions/aether-library.svg",
+        "symbolic": "symbolic/actions/aether-library-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-library.svg",
+          "24": "color-dark/24/actions/aether-library.svg",
+          "32": "color-dark/32/actions/aether-library.svg",
+          "48": "color-dark/48/actions/aether-library.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-library.svg",
+          "24": "color-light/24/actions/aether-library.svg",
+          "32": "color-light/32/actions/aether-library.svg",
+          "48": "color-light/48/actions/aether-library.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-recent",
+      "label": "Recent",
+      "context": "actions",
+      "aliases": [
+        "document-open-recent",
+        "view-history"
+      ],
+      "meaning": "Recently used objects, with no implied replay",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-recent.svg",
+        "color-light": "color-light/actions/aether-recent.svg",
+        "symbolic": "symbolic/actions/aether-recent-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-recent.svg",
+          "24": "color-dark/24/actions/aether-recent.svg",
+          "32": "color-dark/32/actions/aether-recent.svg",
+          "48": "color-dark/48/actions/aether-recent.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-recent.svg",
+          "24": "color-light/24/actions/aether-recent.svg",
+          "32": "color-light/32/actions/aether-recent.svg",
+          "48": "color-light/48/actions/aether-recent.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-workspace",
+      "label": "Workspace",
+      "context": "places",
+      "aliases": [
+        "preferences-desktop-workspaces",
+        "view-grid"
+      ],
+      "meaning": "Nonoverlapping regions belonging to one workspace",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-workspace.svg",
+        "color-light": "color-light/places/aether-workspace.svg",
+        "symbolic": "symbolic/places/aether-workspace-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-workspace.svg",
+          "24": "color-dark/24/places/aether-workspace.svg",
+          "32": "color-dark/32/places/aether-workspace.svg",
+          "48": "color-dark/48/places/aether-workspace.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-workspace.svg",
+          "24": "color-light/24/places/aether-workspace.svg",
+          "32": "color-light/32/places/aether-workspace.svg",
+          "48": "color-light/48/places/aether-workspace.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-window",
+      "label": "Window",
+      "context": "places",
+      "aliases": [
+        "preferences-system-windows",
+        "window"
+      ],
+      "meaning": "Window identity; not automatically a new window action",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-window.svg",
+        "color-light": "color-light/places/aether-window.svg",
+        "symbolic": "symbolic/places/aether-window-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-window.svg",
+          "24": "color-dark/24/places/aether-window.svg",
+          "32": "color-dark/32/places/aether-window.svg",
+          "48": "color-dark/48/places/aether-window.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-window.svg",
+          "24": "color-light/24/places/aether-window.svg",
+          "32": "color-light/32/places/aether-window.svg",
+          "48": "color-light/48/places/aether-window.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-application",
+      "label": "Application",
+      "context": "apps",
+      "aliases": [
+        "application-x-executable",
+        "application-default-icon"
+      ],
+      "meaning": "Generic app fallback; never replaces a known branded application logo",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-application.svg",
+        "color-light": "color-light/apps/aether-application.svg",
+        "symbolic": "symbolic/apps/aether-application-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-application.svg",
+          "24": "color-dark/24/apps/aether-application.svg",
+          "32": "color-dark/32/apps/aether-application.svg",
+          "48": "color-dark/48/apps/aether-application.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-application.svg",
+          "24": "color-light/24/apps/aether-application.svg",
+          "32": "color-light/32/apps/aether-application.svg",
+          "48": "color-light/48/apps/aether-application.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-search",
+      "label": "Search",
+      "context": "actions",
+      "aliases": [
+        "system-search",
+        "edit-find"
+      ],
+      "meaning": "Search",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-search.svg",
+        "color-light": "color-light/actions/aether-search.svg",
+        "symbolic": "symbolic/actions/aether-search-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-search.svg",
+          "24": "color-dark/24/actions/aether-search.svg",
+          "32": "color-dark/32/actions/aether-search.svg",
+          "48": "color-dark/48/actions/aether-search.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-search.svg",
+          "24": "color-light/24/actions/aether-search.svg",
+          "32": "color-light/32/actions/aether-search.svg",
+          "48": "color-light/48/actions/aether-search.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-empty-search",
+      "label": "No matching objects",
+      "context": "status",
+      "aliases": [],
+      "meaning": "Search has no matches; not an error or proof an object does not exist",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/status/aether-empty-search.svg",
+        "color-light": "color-light/status/aether-empty-search.svg",
+        "symbolic": "symbolic/status/aether-empty-search-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-empty-search.svg",
+          "24": "color-dark/24/status/aether-empty-search.svg",
+          "32": "color-dark/32/status/aether-empty-search.svg",
+          "48": "color-dark/48/status/aether-empty-search.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-empty-search.svg",
+          "24": "color-light/24/status/aether-empty-search.svg",
+          "32": "color-light/32/status/aether-empty-search.svg",
+          "48": "color-light/48/status/aether-empty-search.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-home",
+      "label": "Home",
+      "context": "places",
+      "aliases": [
+        "user-home",
+        "go-home"
+      ],
+      "meaning": "Home",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-home.svg",
+        "color-light": "color-light/places/aether-home.svg",
+        "symbolic": "symbolic/places/aether-home-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-home.svg",
+          "24": "color-dark/24/places/aether-home.svg",
+          "32": "color-dark/32/places/aether-home.svg",
+          "48": "color-dark/48/places/aether-home.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-home.svg",
+          "24": "color-light/24/places/aether-home.svg",
+          "32": "color-light/32/places/aether-home.svg",
+          "48": "color-light/48/places/aether-home.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-menu",
+      "label": "Menu",
+      "context": "actions",
+      "aliases": [
+        "open-menu",
+        "view-list"
+      ],
+      "meaning": "Menu",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-menu.svg",
+        "color-light": "color-light/actions/aether-menu.svg",
+        "symbolic": "symbolic/actions/aether-menu-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-menu.svg",
+          "24": "color-dark/24/actions/aether-menu.svg",
+          "32": "color-dark/32/actions/aether-menu.svg",
+          "48": "color-dark/48/actions/aether-menu.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-menu.svg",
+          "24": "color-light/24/actions/aether-menu.svg",
+          "32": "color-light/32/actions/aether-menu.svg",
+          "48": "color-light/48/actions/aether-menu.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-back",
+      "label": "Back",
+      "context": "actions",
+      "aliases": [
+        "go-previous"
+      ],
+      "meaning": "Previous logical destination; adapters may mirror for RTL",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-back.svg",
+        "color-light": "color-light/actions/aether-back.svg",
+        "symbolic": "symbolic/actions/aether-back-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-back.svg",
+          "24": "color-dark/24/actions/aether-back.svg",
+          "32": "color-dark/32/actions/aether-back.svg",
+          "48": "color-dark/48/actions/aether-back.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-back.svg",
+          "24": "color-light/24/actions/aether-back.svg",
+          "32": "color-light/32/actions/aether-back.svg",
+          "48": "color-light/48/actions/aether-back.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-forward",
+      "label": "Forward",
+      "context": "actions",
+      "aliases": [
+        "go-next"
+      ],
+      "meaning": "Next logical destination; adapters may mirror for RTL",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-forward.svg",
+        "color-light": "color-light/actions/aether-forward.svg",
+        "symbolic": "symbolic/actions/aether-forward-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-forward.svg",
+          "24": "color-dark/24/actions/aether-forward.svg",
+          "32": "color-dark/32/actions/aether-forward.svg",
+          "48": "color-dark/48/actions/aether-forward.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-forward.svg",
+          "24": "color-light/24/actions/aether-forward.svg",
+          "32": "color-light/32/actions/aether-forward.svg",
+          "48": "color-light/48/actions/aether-forward.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-up",
+      "label": "Up",
+      "context": "actions",
+      "aliases": [
+        "go-up"
+      ],
+      "meaning": "Upward spatial or hierarchical movement; not automatically RTL-mirrored",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-up.svg",
+        "color-light": "color-light/actions/aether-up.svg",
+        "symbolic": "symbolic/actions/aether-up-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-up.svg",
+          "24": "color-dark/24/actions/aether-up.svg",
+          "32": "color-dark/32/actions/aether-up.svg",
+          "48": "color-dark/48/actions/aether-up.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-up.svg",
+          "24": "color-light/24/actions/aether-up.svg",
+          "32": "color-light/32/actions/aether-up.svg",
+          "48": "color-light/48/actions/aether-up.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-down",
+      "label": "Down",
+      "context": "actions",
+      "aliases": [
+        "go-down"
+      ],
+      "meaning": "Down",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-down.svg",
+        "color-light": "color-light/actions/aether-down.svg",
+        "symbolic": "symbolic/actions/aether-down-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-down.svg",
+          "24": "color-dark/24/actions/aether-down.svg",
+          "32": "color-dark/32/actions/aether-down.svg",
+          "48": "color-dark/48/actions/aether-down.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-down.svg",
+          "24": "color-light/24/actions/aether-down.svg",
+          "32": "color-light/32/actions/aether-down.svg",
+          "48": "color-light/48/actions/aether-down.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-more",
+      "label": "More actions",
+      "context": "actions",
+      "aliases": [
+        "view-more",
+        "overflow-menu"
+      ],
+      "meaning": "More actions",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-more.svg",
+        "color-light": "color-light/actions/aether-more.svg",
+        "symbolic": "symbolic/actions/aether-more-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-more.svg",
+          "24": "color-dark/24/actions/aether-more.svg",
+          "32": "color-dark/32/actions/aether-more.svg",
+          "48": "color-dark/48/actions/aether-more.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-more.svg",
+          "24": "color-light/24/actions/aether-more.svg",
+          "32": "color-light/32/actions/aether-more.svg",
+          "48": "color-light/48/actions/aether-more.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-add",
+      "label": "Add",
+      "context": "actions",
+      "aliases": [
+        "list-add",
+        "add"
+      ],
+      "meaning": "Add",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-add.svg",
+        "color-light": "color-light/actions/aether-add.svg",
+        "symbolic": "symbolic/actions/aether-add-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-add.svg",
+          "24": "color-dark/24/actions/aether-add.svg",
+          "32": "color-dark/32/actions/aether-add.svg",
+          "48": "color-dark/48/actions/aether-add.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-add.svg",
+          "24": "color-light/24/actions/aether-add.svg",
+          "32": "color-light/32/actions/aether-add.svg",
+          "48": "color-light/48/actions/aether-add.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-remove",
+      "label": "Remove from collection",
+      "context": "actions",
+      "aliases": [
+        "list-remove"
+      ],
+      "meaning": "Remove membership; distinct from deleting or closing",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-remove.svg",
+        "color-light": "color-light/actions/aether-remove.svg",
+        "symbolic": "symbolic/actions/aether-remove-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-remove.svg",
+          "24": "color-dark/24/actions/aether-remove.svg",
+          "32": "color-dark/32/actions/aether-remove.svg",
+          "48": "color-dark/48/actions/aether-remove.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-remove.svg",
+          "24": "color-light/24/actions/aether-remove.svg",
+          "32": "color-light/32/actions/aether-remove.svg",
+          "48": "color-light/48/actions/aether-remove.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-close",
+      "label": "Close",
+      "context": "actions",
+      "aliases": [
+        "window-close"
+      ],
+      "meaning": "Close a surface; does not imply canceling underlying work",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-close.svg",
+        "color-light": "color-light/actions/aether-close.svg",
+        "symbolic": "symbolic/actions/aether-close-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-close.svg",
+          "24": "color-dark/24/actions/aether-close.svg",
+          "32": "color-dark/32/actions/aether-close.svg",
+          "48": "color-dark/48/actions/aether-close.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-close.svg",
+          "24": "color-light/24/actions/aether-close.svg",
+          "32": "color-light/32/actions/aether-close.svg",
+          "48": "color-light/48/actions/aether-close.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-check",
+      "label": "Choose or accept",
+      "context": "actions",
+      "aliases": [
+        "object-select",
+        "dialog-ok",
+        "dialog-ok-apply"
+      ],
+      "meaning": "Choose or accept",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-check.svg",
+        "color-light": "color-light/actions/aether-check.svg",
+        "symbolic": "symbolic/actions/aether-check-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-check.svg",
+          "24": "color-dark/24/actions/aether-check.svg",
+          "32": "color-dark/32/actions/aether-check.svg",
+          "48": "color-dark/48/actions/aether-check.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-check.svg",
+          "24": "color-light/24/actions/aether-check.svg",
+          "32": "color-light/32/actions/aether-check.svg",
+          "48": "color-light/48/actions/aether-check.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-refresh",
+      "label": "Refresh",
+      "context": "actions",
+      "aliases": [
+        "view-refresh"
+      ],
+      "meaning": "Read/reconcile current information; not blindly retry a command",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-refresh.svg",
+        "color-light": "color-light/actions/aether-refresh.svg",
+        "symbolic": "symbolic/actions/aether-refresh-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-refresh.svg",
+          "24": "color-dark/24/actions/aether-refresh.svg",
+          "32": "color-dark/32/actions/aether-refresh.svg",
+          "48": "color-dark/48/actions/aether-refresh.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-refresh.svg",
+          "24": "color-light/24/actions/aether-refresh.svg",
+          "32": "color-light/32/actions/aether-refresh.svg",
+          "48": "color-light/48/actions/aether-refresh.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-undo",
+      "label": "Undo",
+      "context": "actions",
+      "aliases": [
+        "edit-undo"
+      ],
+      "meaning": "Only show when the specific action supports undo",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-undo.svg",
+        "color-light": "color-light/actions/aether-undo.svg",
+        "symbolic": "symbolic/actions/aether-undo-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-undo.svg",
+          "24": "color-dark/24/actions/aether-undo.svg",
+          "32": "color-dark/32/actions/aether-undo.svg",
+          "48": "color-dark/48/actions/aether-undo.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-undo.svg",
+          "24": "color-light/24/actions/aether-undo.svg",
+          "32": "color-light/32/actions/aether-undo.svg",
+          "48": "color-light/48/actions/aether-undo.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-redo",
+      "label": "Redo",
+      "context": "actions",
+      "aliases": [
+        "edit-redo"
+      ],
+      "meaning": "Redo",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-redo.svg",
+        "color-light": "color-light/actions/aether-redo.svg",
+        "symbolic": "symbolic/actions/aether-redo-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-redo.svg",
+          "24": "color-dark/24/actions/aether-redo.svg",
+          "32": "color-dark/32/actions/aether-redo.svg",
+          "48": "color-dark/48/actions/aether-redo.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-redo.svg",
+          "24": "color-light/24/actions/aether-redo.svg",
+          "32": "color-light/32/actions/aether-redo.svg",
+          "48": "color-light/48/actions/aether-redo.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-copy",
+      "label": "Copy",
+      "context": "actions",
+      "aliases": [
+        "edit-copy"
+      ],
+      "meaning": "Copy content or recipe; a new operation keeps explicit new scope",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-copy.svg",
+        "color-light": "color-light/actions/aether-copy.svg",
+        "symbolic": "symbolic/actions/aether-copy-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-copy.svg",
+          "24": "color-dark/24/actions/aether-copy.svg",
+          "32": "color-dark/32/actions/aether-copy.svg",
+          "48": "color-dark/48/actions/aether-copy.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-copy.svg",
+          "24": "color-light/24/actions/aether-copy.svg",
+          "32": "color-light/32/actions/aether-copy.svg",
+          "48": "color-light/48/actions/aether-copy.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-move",
+      "label": "Move",
+      "context": "actions",
+      "aliases": [
+        "transform-move",
+        "edit-move"
+      ],
+      "meaning": "Move",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-move.svg",
+        "color-light": "color-light/actions/aether-move.svg",
+        "symbolic": "symbolic/actions/aether-move-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-move.svg",
+          "24": "color-dark/24/actions/aether-move.svg",
+          "32": "color-dark/32/actions/aether-move.svg",
+          "48": "color-dark/48/actions/aether-move.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-move.svg",
+          "24": "color-light/24/actions/aether-move.svg",
+          "32": "color-light/32/actions/aether-move.svg",
+          "48": "color-light/48/actions/aether-move.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-save",
+      "label": "Save",
+      "context": "actions",
+      "aliases": [
+        "document-save"
+      ],
+      "meaning": "Save",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-save.svg",
+        "color-light": "color-light/actions/aether-save.svg",
+        "symbolic": "symbolic/actions/aether-save-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-save.svg",
+          "24": "color-dark/24/actions/aether-save.svg",
+          "32": "color-dark/32/actions/aether-save.svg",
+          "48": "color-dark/48/actions/aether-save.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-save.svg",
+          "24": "color-light/24/actions/aether-save.svg",
+          "32": "color-light/32/actions/aether-save.svg",
+          "48": "color-light/48/actions/aether-save.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-open",
+      "label": "Open",
+      "context": "actions",
+      "aliases": [
+        "document-open"
+      ],
+      "meaning": "Open",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-open.svg",
+        "color-light": "color-light/actions/aether-open.svg",
+        "symbolic": "symbolic/actions/aether-open-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-open.svg",
+          "24": "color-dark/24/actions/aether-open.svg",
+          "32": "color-dark/32/actions/aether-open.svg",
+          "48": "color-dark/48/actions/aether-open.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-open.svg",
+          "24": "color-light/24/actions/aether-open.svg",
+          "32": "color-light/32/actions/aether-open.svg",
+          "48": "color-light/48/actions/aether-open.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-edit",
+      "label": "Edit",
+      "context": "actions",
+      "aliases": [
+        "document-edit",
+        "edit"
+      ],
+      "meaning": "Edit",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-edit.svg",
+        "color-light": "color-light/actions/aether-edit.svg",
+        "symbolic": "symbolic/actions/aether-edit-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-edit.svg",
+          "24": "color-dark/24/actions/aether-edit.svg",
+          "32": "color-dark/32/actions/aether-edit.svg",
+          "48": "color-dark/48/actions/aether-edit.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-edit.svg",
+          "24": "color-light/24/actions/aether-edit.svg",
+          "32": "color-light/32/actions/aether-edit.svg",
+          "48": "color-light/48/actions/aether-edit.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-settings",
+      "label": "Settings",
+      "context": "actions",
+      "aliases": [
+        "preferences-system",
+        "emblem-system"
+      ],
+      "meaning": "Settings",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-settings.svg",
+        "color-light": "color-light/actions/aether-settings.svg",
+        "symbolic": "symbolic/actions/aether-settings-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-settings.svg",
+          "24": "color-dark/24/actions/aether-settings.svg",
+          "32": "color-dark/32/actions/aether-settings.svg",
+          "48": "color-dark/48/actions/aether-settings.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-settings.svg",
+          "24": "color-light/24/actions/aether-settings.svg",
+          "32": "color-light/32/actions/aether-settings.svg",
+          "48": "color-light/48/actions/aether-settings.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-power",
+      "label": "Power",
+      "context": "actions",
+      "aliases": [
+        "system-shutdown"
+      ],
+      "meaning": "Power action; label must identify its actual consequence",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-power.svg",
+        "color-light": "color-light/actions/aether-power.svg",
+        "symbolic": "symbolic/actions/aether-power-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-power.svg",
+          "24": "color-dark/24/actions/aether-power.svg",
+          "32": "color-dark/32/actions/aether-power.svg",
+          "48": "color-dark/48/actions/aether-power.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-power.svg",
+          "24": "color-light/24/actions/aether-power.svg",
+          "32": "color-light/32/actions/aether-power.svg",
+          "48": "color-light/48/actions/aether-power.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-lock",
+      "label": "Lock",
+      "context": "actions",
+      "aliases": [
+        "changes-prevent",
+        "system-lock-screen"
+      ],
+      "meaning": "Lock",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-lock.svg",
+        "color-light": "color-light/actions/aether-lock.svg",
+        "symbolic": "symbolic/actions/aether-lock-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-lock.svg",
+          "24": "color-dark/24/actions/aether-lock.svg",
+          "32": "color-dark/32/actions/aether-lock.svg",
+          "48": "color-dark/48/actions/aether-lock.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-lock.svg",
+          "24": "color-light/24/actions/aether-lock.svg",
+          "32": "color-light/32/actions/aether-lock.svg",
+          "48": "color-light/48/actions/aether-lock.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-unlock",
+      "label": "Unlock",
+      "context": "actions",
+      "aliases": [
+        "changes-allow"
+      ],
+      "meaning": "Unlock",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-unlock.svg",
+        "color-light": "color-light/actions/aether-unlock.svg",
+        "symbolic": "symbolic/actions/aether-unlock-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-unlock.svg",
+          "24": "color-dark/24/actions/aether-unlock.svg",
+          "32": "color-dark/32/actions/aether-unlock.svg",
+          "48": "color-dark/48/actions/aether-unlock.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-unlock.svg",
+          "24": "color-light/24/actions/aether-unlock.svg",
+          "32": "color-light/32/actions/aether-unlock.svg",
+          "48": "color-light/48/actions/aether-unlock.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-fullscreen",
+      "label": "Fullscreen",
+      "context": "actions",
+      "aliases": [
+        "view-fullscreen"
+      ],
+      "meaning": "Fullscreen",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-fullscreen.svg",
+        "color-light": "color-light/actions/aether-fullscreen.svg",
+        "symbolic": "symbolic/actions/aether-fullscreen-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-fullscreen.svg",
+          "24": "color-dark/24/actions/aether-fullscreen.svg",
+          "32": "color-dark/32/actions/aether-fullscreen.svg",
+          "48": "color-dark/48/actions/aether-fullscreen.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-fullscreen.svg",
+          "24": "color-light/24/actions/aether-fullscreen.svg",
+          "32": "color-light/32/actions/aether-fullscreen.svg",
+          "48": "color-light/48/actions/aether-fullscreen.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-restore",
+      "label": "Restore view",
+      "context": "actions",
+      "aliases": [
+        "view-restore"
+      ],
+      "meaning": "Restore view geometry; not a promise of data rollback",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-restore.svg",
+        "color-light": "color-light/actions/aether-restore.svg",
+        "symbolic": "symbolic/actions/aether-restore-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-restore.svg",
+          "24": "color-dark/24/actions/aether-restore.svg",
+          "32": "color-dark/32/actions/aether-restore.svg",
+          "48": "color-dark/48/actions/aether-restore.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-restore.svg",
+          "24": "color-light/24/actions/aether-restore.svg",
+          "32": "color-light/32/actions/aether-restore.svg",
+          "48": "color-light/48/actions/aether-restore.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-filter",
+      "label": "Filter",
+      "context": "actions",
+      "aliases": [
+        "view-filter"
+      ],
+      "meaning": "Filter",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-filter.svg",
+        "color-light": "color-light/actions/aether-filter.svg",
+        "symbolic": "symbolic/actions/aether-filter-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-filter.svg",
+          "24": "color-dark/24/actions/aether-filter.svg",
+          "32": "color-dark/32/actions/aether-filter.svg",
+          "48": "color-dark/48/actions/aether-filter.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-filter.svg",
+          "24": "color-light/24/actions/aether-filter.svg",
+          "32": "color-light/32/actions/aether-filter.svg",
+          "48": "color-light/48/actions/aether-filter.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-sort",
+      "label": "Sort",
+      "context": "actions",
+      "aliases": [
+        "view-sort-ascending"
+      ],
+      "meaning": "Order controls require explicit key/direction labels",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/actions/aether-sort.svg",
+        "color-light": "color-light/actions/aether-sort.svg",
+        "symbolic": "symbolic/actions/aether-sort-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/actions/aether-sort.svg",
+          "24": "color-dark/24/actions/aether-sort.svg",
+          "32": "color-dark/32/actions/aether-sort.svg",
+          "48": "color-dark/48/actions/aether-sort.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/actions/aether-sort.svg",
+          "24": "color-light/24/actions/aether-sort.svg",
+          "32": "color-light/32/actions/aether-sort.svg",
+          "48": "color-light/48/actions/aether-sort.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder",
+      "label": "Folder",
+      "context": "places",
+      "aliases": [
+        "folder",
+        "inode-directory"
+      ],
+      "meaning": "Folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder.svg",
+        "color-light": "color-light/places/aether-folder.svg",
+        "symbolic": "symbolic/places/aether-folder-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder.svg",
+          "24": "color-dark/24/places/aether-folder.svg",
+          "32": "color-dark/32/places/aether-folder.svg",
+          "48": "color-dark/48/places/aether-folder.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder.svg",
+          "24": "color-light/24/places/aether-folder.svg",
+          "32": "color-light/32/places/aether-folder.svg",
+          "48": "color-light/48/places/aether-folder.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-open",
+      "label": "Open folder",
+      "context": "places",
+      "aliases": [
+        "folder-open"
+      ],
+      "meaning": "Open folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-open.svg",
+        "color-light": "color-light/places/aether-folder-open.svg",
+        "symbolic": "symbolic/places/aether-folder-open-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-open.svg",
+          "24": "color-dark/24/places/aether-folder-open.svg",
+          "32": "color-dark/32/places/aether-folder-open.svg",
+          "48": "color-dark/48/places/aether-folder-open.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-open.svg",
+          "24": "color-light/24/places/aether-folder-open.svg",
+          "32": "color-light/32/places/aether-folder-open.svg",
+          "48": "color-light/48/places/aether-folder-open.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-music",
+      "label": "Music folder",
+      "context": "places",
+      "aliases": [
+        "folder-music"
+      ],
+      "meaning": "Music folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-music.svg",
+        "color-light": "color-light/places/aether-folder-music.svg",
+        "symbolic": "symbolic/places/aether-folder-music-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-music.svg",
+          "24": "color-dark/24/places/aether-folder-music.svg",
+          "32": "color-dark/32/places/aether-folder-music.svg",
+          "48": "color-dark/48/places/aether-folder-music.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-music.svg",
+          "24": "color-light/24/places/aether-folder-music.svg",
+          "32": "color-light/32/places/aether-folder-music.svg",
+          "48": "color-light/48/places/aether-folder-music.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-downloads",
+      "label": "Downloads folder",
+      "context": "places",
+      "aliases": [
+        "folder-download",
+        "folder-downloads"
+      ],
+      "meaning": "Downloads folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-downloads.svg",
+        "color-light": "color-light/places/aether-folder-downloads.svg",
+        "symbolic": "symbolic/places/aether-folder-downloads-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-downloads.svg",
+          "24": "color-dark/24/places/aether-folder-downloads.svg",
+          "32": "color-dark/32/places/aether-folder-downloads.svg",
+          "48": "color-dark/48/places/aether-folder-downloads.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-downloads.svg",
+          "24": "color-light/24/places/aether-folder-downloads.svg",
+          "32": "color-light/32/places/aether-folder-downloads.svg",
+          "48": "color-light/48/places/aether-folder-downloads.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-documents",
+      "label": "Documents folder",
+      "context": "places",
+      "aliases": [
+        "folder-documents"
+      ],
+      "meaning": "Documents folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-documents.svg",
+        "color-light": "color-light/places/aether-folder-documents.svg",
+        "symbolic": "symbolic/places/aether-folder-documents-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-documents.svg",
+          "24": "color-dark/24/places/aether-folder-documents.svg",
+          "32": "color-dark/32/places/aether-folder-documents.svg",
+          "48": "color-dark/48/places/aether-folder-documents.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-documents.svg",
+          "24": "color-light/24/places/aether-folder-documents.svg",
+          "32": "color-light/32/places/aether-folder-documents.svg",
+          "48": "color-light/48/places/aether-folder-documents.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-pictures",
+      "label": "Pictures folder",
+      "context": "places",
+      "aliases": [
+        "folder-pictures"
+      ],
+      "meaning": "Pictures folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-pictures.svg",
+        "color-light": "color-light/places/aether-folder-pictures.svg",
+        "symbolic": "symbolic/places/aether-folder-pictures-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-pictures.svg",
+          "24": "color-dark/24/places/aether-folder-pictures.svg",
+          "32": "color-dark/32/places/aether-folder-pictures.svg",
+          "48": "color-dark/48/places/aether-folder-pictures.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-pictures.svg",
+          "24": "color-light/24/places/aether-folder-pictures.svg",
+          "32": "color-light/32/places/aether-folder-pictures.svg",
+          "48": "color-light/48/places/aether-folder-pictures.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-video",
+      "label": "Videos folder",
+      "context": "places",
+      "aliases": [
+        "folder-videos"
+      ],
+      "meaning": "Videos folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-video.svg",
+        "color-light": "color-light/places/aether-folder-video.svg",
+        "symbolic": "symbolic/places/aether-folder-video-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-video.svg",
+          "24": "color-dark/24/places/aether-folder-video.svg",
+          "32": "color-dark/32/places/aether-folder-video.svg",
+          "48": "color-dark/48/places/aether-folder-video.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-video.svg",
+          "24": "color-light/24/places/aether-folder-video.svg",
+          "32": "color-light/32/places/aether-folder-video.svg",
+          "48": "color-light/48/places/aether-folder-video.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-folder-projects",
+      "label": "Projects folder",
+      "context": "places",
+      "aliases": [
+        "folder-development"
+      ],
+      "meaning": "Projects folder",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-folder-projects.svg",
+        "color-light": "color-light/places/aether-folder-projects.svg",
+        "symbolic": "symbolic/places/aether-folder-projects-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-folder-projects.svg",
+          "24": "color-dark/24/places/aether-folder-projects.svg",
+          "32": "color-dark/32/places/aether-folder-projects.svg",
+          "48": "color-dark/48/places/aether-folder-projects.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-folder-projects.svg",
+          "24": "color-light/24/places/aether-folder-projects.svg",
+          "32": "color-light/32/places/aether-folder-projects.svg",
+          "48": "color-light/48/places/aether-folder-projects.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-archive",
+      "label": "Archive",
+      "context": "mimetypes",
+      "aliases": [
+        "application-x-archive",
+        "application-zip"
+      ],
+      "meaning": "Archive",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-archive.svg",
+        "color-light": "color-light/mimetypes/aether-archive.svg",
+        "symbolic": "symbolic/mimetypes/aether-archive-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-archive.svg",
+          "24": "color-dark/24/mimetypes/aether-archive.svg",
+          "32": "color-dark/32/mimetypes/aether-archive.svg",
+          "48": "color-dark/48/mimetypes/aether-archive.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-archive.svg",
+          "24": "color-light/24/mimetypes/aether-archive.svg",
+          "32": "color-light/32/mimetypes/aether-archive.svg",
+          "48": "color-light/48/mimetypes/aether-archive.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-trash",
+      "label": "Trash",
+      "context": "places",
+      "aliases": [
+        "user-trash",
+        "edit-delete"
+      ],
+      "meaning": "Destructive delete/trash is not the close action",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/places/aether-trash.svg",
+        "color-light": "color-light/places/aether-trash.svg",
+        "symbolic": "symbolic/places/aether-trash-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/places/aether-trash.svg",
+          "24": "color-dark/24/places/aether-trash.svg",
+          "32": "color-dark/32/places/aether-trash.svg",
+          "48": "color-dark/48/places/aether-trash.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/places/aether-trash.svg",
+          "24": "color-light/24/places/aether-trash.svg",
+          "32": "color-light/32/places/aether-trash.svg",
+          "48": "color-light/48/places/aether-trash.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document",
+      "label": "Document",
+      "context": "mimetypes",
+      "aliases": [
+        "text-x-generic",
+        "application-pdf",
+        "unknown"
+      ],
+      "meaning": "Document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document.svg",
+        "color-light": "color-light/mimetypes/aether-document.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document.svg",
+          "24": "color-dark/24/mimetypes/aether-document.svg",
+          "32": "color-dark/32/mimetypes/aether-document.svg",
+          "48": "color-dark/48/mimetypes/aether-document.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document.svg",
+          "24": "color-light/24/mimetypes/aether-document.svg",
+          "32": "color-light/32/mimetypes/aether-document.svg",
+          "48": "color-light/48/mimetypes/aether-document.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-text",
+      "label": "Text document",
+      "context": "mimetypes",
+      "aliases": [
+        "text-plain",
+        "text-x-readme",
+        "x-office-document"
+      ],
+      "meaning": "Text document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-text.svg",
+        "color-light": "color-light/mimetypes/aether-document-text.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-text-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-text.svg",
+          "24": "color-dark/24/mimetypes/aether-document-text.svg",
+          "32": "color-dark/32/mimetypes/aether-document-text.svg",
+          "48": "color-dark/48/mimetypes/aether-document-text.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-text.svg",
+          "24": "color-light/24/mimetypes/aether-document-text.svg",
+          "32": "color-light/32/mimetypes/aether-document-text.svg",
+          "48": "color-light/48/mimetypes/aether-document-text.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-code",
+      "label": "Code document",
+      "context": "mimetypes",
+      "aliases": [
+        "text-x-script",
+        "text-x-python",
+        "text-html"
+      ],
+      "meaning": "Code document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-code.svg",
+        "color-light": "color-light/mimetypes/aether-document-code.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-code-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-code.svg",
+          "24": "color-dark/24/mimetypes/aether-document-code.svg",
+          "32": "color-dark/32/mimetypes/aether-document-code.svg",
+          "48": "color-dark/48/mimetypes/aether-document-code.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-code.svg",
+          "24": "color-light/24/mimetypes/aether-document-code.svg",
+          "32": "color-light/32/mimetypes/aether-document-code.svg",
+          "48": "color-light/48/mimetypes/aether-document-code.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-audio",
+      "label": "Audio document",
+      "context": "mimetypes",
+      "aliases": [
+        "audio-x-generic"
+      ],
+      "meaning": "Audio document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-audio.svg",
+        "color-light": "color-light/mimetypes/aether-document-audio.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-audio-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-audio.svg",
+          "24": "color-dark/24/mimetypes/aether-document-audio.svg",
+          "32": "color-dark/32/mimetypes/aether-document-audio.svg",
+          "48": "color-dark/48/mimetypes/aether-document-audio.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-audio.svg",
+          "24": "color-light/24/mimetypes/aether-document-audio.svg",
+          "32": "color-light/32/mimetypes/aether-document-audio.svg",
+          "48": "color-light/48/mimetypes/aether-document-audio.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-image",
+      "label": "Image document",
+      "context": "mimetypes",
+      "aliases": [
+        "image-x-generic"
+      ],
+      "meaning": "Image document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-image.svg",
+        "color-light": "color-light/mimetypes/aether-document-image.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-image-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-image.svg",
+          "24": "color-dark/24/mimetypes/aether-document-image.svg",
+          "32": "color-dark/32/mimetypes/aether-document-image.svg",
+          "48": "color-dark/48/mimetypes/aether-document-image.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-image.svg",
+          "24": "color-light/24/mimetypes/aether-document-image.svg",
+          "32": "color-light/32/mimetypes/aether-document-image.svg",
+          "48": "color-light/48/mimetypes/aether-document-image.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-video",
+      "label": "Video document",
+      "context": "mimetypes",
+      "aliases": [
+        "video-x-generic"
+      ],
+      "meaning": "Video document",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-video.svg",
+        "color-light": "color-light/mimetypes/aether-document-video.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-video-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-video.svg",
+          "24": "color-dark/24/mimetypes/aether-document-video.svg",
+          "32": "color-dark/32/mimetypes/aether-document-video.svg",
+          "48": "color-dark/48/mimetypes/aether-document-video.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-video.svg",
+          "24": "color-light/24/mimetypes/aether-document-video.svg",
+          "32": "color-light/32/mimetypes/aether-document-video.svg",
+          "48": "color-light/48/mimetypes/aether-document-video.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-document-table",
+      "label": "Spreadsheet",
+      "context": "mimetypes",
+      "aliases": [
+        "x-office-spreadsheet"
+      ],
+      "meaning": "Spreadsheet",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-document-table.svg",
+        "color-light": "color-light/mimetypes/aether-document-table.svg",
+        "symbolic": "symbolic/mimetypes/aether-document-table-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-document-table.svg",
+          "24": "color-dark/24/mimetypes/aether-document-table.svg",
+          "32": "color-dark/32/mimetypes/aether-document-table.svg",
+          "48": "color-dark/48/mimetypes/aether-document-table.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-document-table.svg",
+          "24": "color-light/24/mimetypes/aether-document-table.svg",
+          "32": "color-light/32/mimetypes/aether-document-table.svg",
+          "48": "color-light/48/mimetypes/aether-document-table.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-package",
+      "label": "Package",
+      "context": "mimetypes",
+      "aliases": [
+        "package-x-generic"
+      ],
+      "meaning": "Package",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/mimetypes/aether-package.svg",
+        "color-light": "color-light/mimetypes/aether-package.svg",
+        "symbolic": "symbolic/mimetypes/aether-package-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/mimetypes/aether-package.svg",
+          "24": "color-dark/24/mimetypes/aether-package.svg",
+          "32": "color-dark/32/mimetypes/aether-package.svg",
+          "48": "color-dark/48/mimetypes/aether-package.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/mimetypes/aether-package.svg",
+          "24": "color-light/24/mimetypes/aether-package.svg",
+          "32": "color-light/32/mimetypes/aether-package.svg",
+          "48": "color-light/48/mimetypes/aether-package.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-computer",
+      "label": "Computer",
+      "context": "devices",
+      "aliases": [
+        "computer",
+        "computer-desktop"
+      ],
+      "meaning": "Computer",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-computer.svg",
+        "color-light": "color-light/devices/aether-computer.svg",
+        "symbolic": "symbolic/devices/aether-computer-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-computer.svg",
+          "24": "color-dark/24/devices/aether-computer.svg",
+          "32": "color-dark/32/devices/aether-computer.svg",
+          "48": "color-dark/48/devices/aether-computer.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-computer.svg",
+          "24": "color-light/24/devices/aether-computer.svg",
+          "32": "color-light/32/devices/aether-computer.svg",
+          "48": "color-light/48/devices/aether-computer.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-display",
+      "label": "Display",
+      "context": "devices",
+      "aliases": [
+        "video-display",
+        "preferences-desktop-display"
+      ],
+      "meaning": "Display",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-display.svg",
+        "color-light": "color-light/devices/aether-display.svg",
+        "symbolic": "symbolic/devices/aether-display-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-display.svg",
+          "24": "color-dark/24/devices/aether-display.svg",
+          "32": "color-dark/32/devices/aether-display.svg",
+          "48": "color-dark/48/devices/aether-display.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-display.svg",
+          "24": "color-light/24/devices/aether-display.svg",
+          "32": "color-light/32/devices/aether-display.svg",
+          "48": "color-light/48/devices/aether-display.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-laptop",
+      "label": "Laptop",
+      "context": "devices",
+      "aliases": [
+        "computer-laptop"
+      ],
+      "meaning": "Laptop",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-laptop.svg",
+        "color-light": "color-light/devices/aether-laptop.svg",
+        "symbolic": "symbolic/devices/aether-laptop-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-laptop.svg",
+          "24": "color-dark/24/devices/aether-laptop.svg",
+          "32": "color-dark/32/devices/aether-laptop.svg",
+          "48": "color-dark/48/devices/aether-laptop.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-laptop.svg",
+          "24": "color-light/24/devices/aether-laptop.svg",
+          "32": "color-light/32/devices/aether-laptop.svg",
+          "48": "color-light/48/devices/aether-laptop.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-keyboard",
+      "label": "Keyboard",
+      "context": "devices",
+      "aliases": [
+        "input-keyboard"
+      ],
+      "meaning": "Keyboard",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-keyboard.svg",
+        "color-light": "color-light/devices/aether-keyboard.svg",
+        "symbolic": "symbolic/devices/aether-keyboard-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-keyboard.svg",
+          "24": "color-dark/24/devices/aether-keyboard.svg",
+          "32": "color-dark/32/devices/aether-keyboard.svg",
+          "48": "color-dark/48/devices/aether-keyboard.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-keyboard.svg",
+          "24": "color-light/24/devices/aether-keyboard.svg",
+          "32": "color-light/32/devices/aether-keyboard.svg",
+          "48": "color-light/48/devices/aether-keyboard.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-mouse",
+      "label": "Mouse",
+      "context": "devices",
+      "aliases": [
+        "input-mouse"
+      ],
+      "meaning": "Mouse",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-mouse.svg",
+        "color-light": "color-light/devices/aether-mouse.svg",
+        "symbolic": "symbolic/devices/aether-mouse-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-mouse.svg",
+          "24": "color-dark/24/devices/aether-mouse.svg",
+          "32": "color-dark/32/devices/aether-mouse.svg",
+          "48": "color-dark/48/devices/aether-mouse.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-mouse.svg",
+          "24": "color-light/24/devices/aether-mouse.svg",
+          "32": "color-light/32/devices/aether-mouse.svg",
+          "48": "color-light/48/devices/aether-mouse.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-headphones",
+      "label": "Headphones",
+      "context": "devices",
+      "aliases": [
+        "audio-headphones"
+      ],
+      "meaning": "Headphones",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-headphones.svg",
+        "color-light": "color-light/devices/aether-headphones.svg",
+        "symbolic": "symbolic/devices/aether-headphones-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-headphones.svg",
+          "24": "color-dark/24/devices/aether-headphones.svg",
+          "32": "color-dark/32/devices/aether-headphones.svg",
+          "48": "color-dark/48/devices/aether-headphones.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-headphones.svg",
+          "24": "color-light/24/devices/aether-headphones.svg",
+          "32": "color-light/32/devices/aether-headphones.svg",
+          "48": "color-light/48/devices/aether-headphones.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-microphone",
+      "label": "Microphone",
+      "context": "devices",
+      "aliases": [
+        "audio-input-microphone"
+      ],
+      "meaning": "Microphone",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-microphone.svg",
+        "color-light": "color-light/devices/aether-microphone.svg",
+        "symbolic": "symbolic/devices/aether-microphone-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-microphone.svg",
+          "24": "color-dark/24/devices/aether-microphone.svg",
+          "32": "color-dark/32/devices/aether-microphone.svg",
+          "48": "color-dark/48/devices/aether-microphone.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-microphone.svg",
+          "24": "color-light/24/devices/aether-microphone.svg",
+          "32": "color-light/32/devices/aether-microphone.svg",
+          "48": "color-light/48/devices/aether-microphone.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-speaker",
+      "label": "Speaker",
+      "context": "devices",
+      "aliases": [
+        "audio-speakers"
+      ],
+      "meaning": "Output device identity, not its current volume level",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-speaker.svg",
+        "color-light": "color-light/devices/aether-speaker.svg",
+        "symbolic": "symbolic/devices/aether-speaker-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-speaker.svg",
+          "24": "color-dark/24/devices/aether-speaker.svg",
+          "32": "color-dark/32/devices/aether-speaker.svg",
+          "48": "color-dark/48/devices/aether-speaker.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-speaker.svg",
+          "24": "color-light/24/devices/aether-speaker.svg",
+          "32": "color-light/32/devices/aether-speaker.svg",
+          "48": "color-light/48/devices/aether-speaker.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-camera",
+      "label": "Camera",
+      "context": "devices",
+      "aliases": [
+        "camera-photo",
+        "camera-web"
+      ],
+      "meaning": "Camera",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-camera.svg",
+        "color-light": "color-light/devices/aether-camera.svg",
+        "symbolic": "symbolic/devices/aether-camera-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-camera.svg",
+          "24": "color-dark/24/devices/aether-camera.svg",
+          "32": "color-dark/32/devices/aether-camera.svg",
+          "48": "color-dark/48/devices/aether-camera.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-camera.svg",
+          "24": "color-light/24/devices/aether-camera.svg",
+          "32": "color-light/32/devices/aether-camera.svg",
+          "48": "color-light/48/devices/aether-camera.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-storage",
+      "label": "Storage",
+      "context": "devices",
+      "aliases": [
+        "drive-harddisk",
+        "drive-harddisk-system"
+      ],
+      "meaning": "Storage",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-storage.svg",
+        "color-light": "color-light/devices/aether-storage.svg",
+        "symbolic": "symbolic/devices/aether-storage-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-storage.svg",
+          "24": "color-dark/24/devices/aether-storage.svg",
+          "32": "color-dark/32/devices/aether-storage.svg",
+          "48": "color-dark/48/devices/aether-storage.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-storage.svg",
+          "24": "color-light/24/devices/aether-storage.svg",
+          "32": "color-light/32/devices/aether-storage.svg",
+          "48": "color-light/48/devices/aether-storage.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-usb",
+      "label": "USB",
+      "context": "devices",
+      "aliases": [
+        "drive-removable-media",
+        "usb"
+      ],
+      "meaning": "USB",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-usb.svg",
+        "color-light": "color-light/devices/aether-usb.svg",
+        "symbolic": "symbolic/devices/aether-usb-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-usb.svg",
+          "24": "color-dark/24/devices/aether-usb.svg",
+          "32": "color-dark/32/devices/aether-usb.svg",
+          "48": "color-dark/48/devices/aether-usb.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-usb.svg",
+          "24": "color-light/24/devices/aether-usb.svg",
+          "32": "color-light/32/devices/aether-usb.svg",
+          "48": "color-light/48/devices/aether-usb.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-battery",
+      "label": "Battery",
+      "context": "devices",
+      "aliases": [
+        "battery"
+      ],
+      "meaning": "Battery capability/polarity; not a charge percentage or charging report",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-battery.svg",
+        "color-light": "color-light/devices/aether-battery.svg",
+        "symbolic": "symbolic/devices/aether-battery-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-battery.svg",
+          "24": "color-dark/24/devices/aether-battery.svg",
+          "32": "color-dark/32/devices/aether-battery.svg",
+          "48": "color-dark/48/devices/aether-battery.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-battery.svg",
+          "24": "color-light/24/devices/aether-battery.svg",
+          "32": "color-light/32/devices/aether-battery.svg",
+          "48": "color-light/48/devices/aether-battery.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-printer",
+      "label": "Printer",
+      "context": "devices",
+      "aliases": [
+        "printer"
+      ],
+      "meaning": "Printer",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-printer.svg",
+        "color-light": "color-light/devices/aether-printer.svg",
+        "symbolic": "symbolic/devices/aether-printer-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-printer.svg",
+          "24": "color-dark/24/devices/aether-printer.svg",
+          "32": "color-dark/32/devices/aether-printer.svg",
+          "48": "color-dark/48/devices/aether-printer.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-printer.svg",
+          "24": "color-light/24/devices/aether-printer.svg",
+          "32": "color-light/32/devices/aether-printer.svg",
+          "48": "color-light/48/devices/aether-printer.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-gamepad",
+      "label": "Game controller",
+      "context": "devices",
+      "aliases": [
+        "input-gaming"
+      ],
+      "meaning": "Game controller",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-gamepad.svg",
+        "color-light": "color-light/devices/aether-gamepad.svg",
+        "symbolic": "symbolic/devices/aether-gamepad-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-gamepad.svg",
+          "24": "color-dark/24/devices/aether-gamepad.svg",
+          "32": "color-dark/32/devices/aether-gamepad.svg",
+          "48": "color-dark/48/devices/aether-gamepad.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-gamepad.svg",
+          "24": "color-light/24/devices/aether-gamepad.svg",
+          "32": "color-light/32/devices/aether-gamepad.svg",
+          "48": "color-light/48/devices/aether-gamepad.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-development",
+      "label": "Development",
+      "context": "categories",
+      "aliases": [
+        "applications-development"
+      ],
+      "meaning": "Development",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-development.svg",
+        "color-light": "color-light/categories/aether-development.svg",
+        "symbolic": "symbolic/categories/aether-development-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-development.svg",
+          "24": "color-dark/24/categories/aether-development.svg",
+          "32": "color-dark/32/categories/aether-development.svg",
+          "48": "color-dark/48/categories/aether-development.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-development.svg",
+          "24": "color-light/24/categories/aether-development.svg",
+          "32": "color-light/32/categories/aether-development.svg",
+          "48": "color-light/48/categories/aether-development.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-games",
+      "label": "Games",
+      "context": "categories",
+      "aliases": [
+        "applications-games"
+      ],
+      "meaning": "Games",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-games.svg",
+        "color-light": "color-light/categories/aether-games.svg",
+        "symbolic": "symbolic/categories/aether-games-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-games.svg",
+          "24": "color-dark/24/categories/aether-games.svg",
+          "32": "color-dark/32/categories/aether-games.svg",
+          "48": "color-dark/48/categories/aether-games.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-games.svg",
+          "24": "color-light/24/categories/aether-games.svg",
+          "32": "color-light/32/categories/aether-games.svg",
+          "48": "color-light/48/categories/aether-games.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-graphics",
+      "label": "Graphics",
+      "context": "categories",
+      "aliases": [
+        "applications-graphics"
+      ],
+      "meaning": "Graphics",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-graphics.svg",
+        "color-light": "color-light/categories/aether-graphics.svg",
+        "symbolic": "symbolic/categories/aether-graphics-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-graphics.svg",
+          "24": "color-dark/24/categories/aether-graphics.svg",
+          "32": "color-dark/32/categories/aether-graphics.svg",
+          "48": "color-dark/48/categories/aether-graphics.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-graphics.svg",
+          "24": "color-light/24/categories/aether-graphics.svg",
+          "32": "color-light/32/categories/aether-graphics.svg",
+          "48": "color-light/48/categories/aether-graphics.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-network",
+      "label": "Network",
+      "context": "categories",
+      "aliases": [
+        "applications-internet",
+        "network-workgroup"
+      ],
+      "meaning": "Network/Internet category, not a connection-health reading",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-network.svg",
+        "color-light": "color-light/categories/aether-network.svg",
+        "symbolic": "symbolic/categories/aether-network-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-network.svg",
+          "24": "color-dark/24/categories/aether-network.svg",
+          "32": "color-dark/32/categories/aether-network.svg",
+          "48": "color-dark/48/categories/aether-network.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-network.svg",
+          "24": "color-light/24/categories/aether-network.svg",
+          "32": "color-light/32/categories/aether-network.svg",
+          "48": "color-light/48/categories/aether-network.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-media",
+      "label": "Media",
+      "context": "categories",
+      "aliases": [
+        "applications-multimedia"
+      ],
+      "meaning": "Media",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-media.svg",
+        "color-light": "color-light/categories/aether-media.svg",
+        "symbolic": "symbolic/categories/aether-media-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-media.svg",
+          "24": "color-dark/24/categories/aether-media.svg",
+          "32": "color-dark/32/categories/aether-media.svg",
+          "48": "color-dark/48/categories/aether-media.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-media.svg",
+          "24": "color-light/24/categories/aether-media.svg",
+          "32": "color-light/32/categories/aether-media.svg",
+          "48": "color-light/48/categories/aether-media.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-office",
+      "label": "Office",
+      "context": "categories",
+      "aliases": [
+        "applications-office"
+      ],
+      "meaning": "Office",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-office.svg",
+        "color-light": "color-light/categories/aether-office.svg",
+        "symbolic": "symbolic/categories/aether-office-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-office.svg",
+          "24": "color-dark/24/categories/aether-office.svg",
+          "32": "color-dark/32/categories/aether-office.svg",
+          "48": "color-dark/48/categories/aether-office.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-office.svg",
+          "24": "color-light/24/categories/aether-office.svg",
+          "32": "color-light/32/categories/aether-office.svg",
+          "48": "color-light/48/categories/aether-office.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-system",
+      "label": "System",
+      "context": "categories",
+      "aliases": [
+        "applications-system",
+        "cpu"
+      ],
+      "meaning": "System",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-system.svg",
+        "color-light": "color-light/categories/aether-system.svg",
+        "symbolic": "symbolic/categories/aether-system-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-system.svg",
+          "24": "color-dark/24/categories/aether-system.svg",
+          "32": "color-dark/32/categories/aether-system.svg",
+          "48": "color-dark/48/categories/aether-system.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-system.svg",
+          "24": "color-light/24/categories/aether-system.svg",
+          "32": "color-light/32/categories/aether-system.svg",
+          "48": "color-light/48/categories/aether-system.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-utilities",
+      "label": "Utilities",
+      "context": "categories",
+      "aliases": [
+        "applications-utilities",
+        "applications-other"
+      ],
+      "meaning": "Utilities",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-utilities.svg",
+        "color-light": "color-light/categories/aether-utilities.svg",
+        "symbolic": "symbolic/categories/aether-utilities-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-utilities.svg",
+          "24": "color-dark/24/categories/aether-utilities.svg",
+          "32": "color-dark/32/categories/aether-utilities.svg",
+          "48": "color-dark/48/categories/aether-utilities.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-utilities.svg",
+          "24": "color-light/24/categories/aether-utilities.svg",
+          "32": "color-light/32/categories/aether-utilities.svg",
+          "48": "color-light/48/categories/aether-utilities.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-music",
+      "label": "Music",
+      "context": "categories",
+      "aliases": [
+        "applications-audio"
+      ],
+      "meaning": "Music category; actual notation, not a decorative signal waveform",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/categories/aether-music.svg",
+        "color-light": "color-light/categories/aether-music.svg",
+        "symbolic": "symbolic/categories/aether-music-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/categories/aether-music.svg",
+          "24": "color-dark/24/categories/aether-music.svg",
+          "32": "color-dark/32/categories/aether-music.svg",
+          "48": "color-dark/48/categories/aether-music.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/categories/aether-music.svg",
+          "24": "color-light/24/categories/aether-music.svg",
+          "32": "color-light/32/categories/aether-music.svg",
+          "48": "color-light/48/categories/aether-music.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-calculator",
+      "label": "Calculator",
+      "context": "apps",
+      "aliases": [
+        "accessories-calculator",
+        "io.aether.calc-menu"
+      ],
+      "meaning": "Calculator",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-calculator.svg",
+        "color-light": "color-light/apps/aether-calculator.svg",
+        "symbolic": "symbolic/apps/aether-calculator-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-calculator.svg",
+          "24": "color-dark/24/apps/aether-calculator.svg",
+          "32": "color-dark/32/apps/aether-calculator.svg",
+          "48": "color-dark/48/apps/aether-calculator.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-calculator.svg",
+          "24": "color-light/24/apps/aether-calculator.svg",
+          "32": "color-light/32/apps/aether-calculator.svg",
+          "48": "color-light/48/apps/aether-calculator.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-audio-console",
+      "label": "Audio console",
+      "context": "apps",
+      "aliases": [
+        "multimedia-volume-control",
+        "audio-card",
+        "io.aether.audio-menu"
+      ],
+      "meaning": "Audio console",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-audio-console.svg",
+        "color-light": "color-light/apps/aether-audio-console.svg",
+        "symbolic": "symbolic/apps/aether-audio-console-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-audio-console.svg",
+          "24": "color-dark/24/apps/aether-audio-console.svg",
+          "32": "color-dark/32/apps/aether-audio-console.svg",
+          "48": "color-dark/48/apps/aether-audio-console.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-audio-console.svg",
+          "24": "color-light/24/apps/aether-audio-console.svg",
+          "32": "color-light/32/apps/aether-audio-console.svg",
+          "48": "color-light/48/apps/aether-audio-console.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-wifi",
+      "label": "Wireless network",
+      "context": "devices",
+      "aliases": [
+        "network-wireless",
+        "io.aether.wifi-menu"
+      ],
+      "meaning": "Wireless capability; never override signal-strength or security-specific status names",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-wifi.svg",
+        "color-light": "color-light/devices/aether-wifi.svg",
+        "symbolic": "symbolic/devices/aether-wifi-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-wifi.svg",
+          "24": "color-dark/24/devices/aether-wifi.svg",
+          "32": "color-dark/32/devices/aether-wifi.svg",
+          "48": "color-dark/48/devices/aether-wifi.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-wifi.svg",
+          "24": "color-light/24/devices/aether-wifi.svg",
+          "32": "color-light/32/devices/aether-wifi.svg",
+          "48": "color-light/48/devices/aether-wifi.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-bluetooth",
+      "label": "Bluetooth",
+      "context": "devices",
+      "aliases": [
+        "bluetooth",
+        "preferences-system-bluetooth",
+        "io.aether.bt-menu"
+      ],
+      "meaning": "Conventional protocol sign; not an app logo or a claimed universal pictogram",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/devices/aether-bluetooth.svg",
+        "color-light": "color-light/devices/aether-bluetooth.svg",
+        "symbolic": "symbolic/devices/aether-bluetooth-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/devices/aether-bluetooth.svg",
+          "24": "color-dark/24/devices/aether-bluetooth.svg",
+          "32": "color-dark/32/devices/aether-bluetooth.svg",
+          "48": "color-dark/48/devices/aether-bluetooth.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/devices/aether-bluetooth.svg",
+          "24": "color-light/24/devices/aether-bluetooth.svg",
+          "32": "color-light/32/devices/aether-bluetooth.svg",
+          "48": "color-light/48/devices/aether-bluetooth.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-cast",
+      "label": "Cast display",
+      "context": "apps",
+      "aliases": [
+        "video-television",
+        "io.aether.cast-menu"
+      ],
+      "meaning": "Cast display",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-cast.svg",
+        "color-light": "color-light/apps/aether-cast.svg",
+        "symbolic": "symbolic/apps/aether-cast-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-cast.svg",
+          "24": "color-dark/24/apps/aether-cast.svg",
+          "32": "color-dark/32/apps/aether-cast.svg",
+          "48": "color-dark/48/apps/aether-cast.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-cast.svg",
+          "24": "color-light/24/apps/aether-cast.svg",
+          "32": "color-light/32/apps/aether-cast.svg",
+          "48": "color-light/48/apps/aether-cast.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-remote",
+      "label": "Remote desktop",
+      "context": "apps",
+      "aliases": [
+        "preferences-desktop-remote-desktop",
+        "io.aether.remote-menu"
+      ],
+      "meaning": "Two named endpoints still require labels; icon does not identify direction alone",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-remote.svg",
+        "color-light": "color-light/apps/aether-remote.svg",
+        "symbolic": "symbolic/apps/aether-remote-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-remote.svg",
+          "24": "color-dark/24/apps/aether-remote.svg",
+          "32": "color-dark/32/apps/aether-remote.svg",
+          "48": "color-dark/48/apps/aether-remote.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-remote.svg",
+          "24": "color-light/24/apps/aether-remote.svg",
+          "32": "color-light/32/apps/aether-remote.svg",
+          "48": "color-light/48/apps/aether-remote.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-keybinds",
+      "label": "Keyboard shortcuts",
+      "context": "apps",
+      "aliases": [
+        "preferences-desktop-keyboard-shortcuts",
+        "io.aether.keybind-guide"
+      ],
+      "meaning": "Keyboard shortcuts",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/apps/aether-keybinds.svg",
+        "color-light": "color-light/apps/aether-keybinds.svg",
+        "symbolic": "symbolic/apps/aether-keybinds-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/apps/aether-keybinds.svg",
+          "24": "color-dark/24/apps/aether-keybinds.svg",
+          "32": "color-dark/32/apps/aether-keybinds.svg",
+          "48": "color-dark/48/apps/aether-keybinds.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/apps/aether-keybinds.svg",
+          "24": "color-light/24/apps/aether-keybinds.svg",
+          "32": "color-light/32/apps/aether-keybinds.svg",
+          "48": "color-light/48/apps/aether-keybinds.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-info",
+      "label": "Information",
+      "context": "status",
+      "aliases": [
+        "dialog-information"
+      ],
+      "meaning": "Information/callout; no letter-only mark",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/status/aether-info.svg",
+        "color-light": "color-light/status/aether-info.svg",
+        "symbolic": "symbolic/status/aether-info-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-info.svg",
+          "24": "color-dark/24/status/aether-info.svg",
+          "32": "color-dark/32/status/aether-info.svg",
+          "48": "color-dark/48/status/aether-info.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-info.svg",
+          "24": "color-light/24/status/aether-info.svg",
+          "32": "color-light/32/status/aether-info.svg",
+          "48": "color-light/48/status/aether-info.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-warning",
+      "label": "Warning",
+      "context": "status",
+      "aliases": [
+        "dialog-warning"
+      ],
+      "meaning": "Warning",
+      "state": "warning",
+      "files": {
+        "color-dark": "color-dark/status/aether-warning.svg",
+        "color-light": "color-light/status/aether-warning.svg",
+        "symbolic": "symbolic/status/aether-warning-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-warning.svg",
+          "24": "color-dark/24/status/aether-warning.svg",
+          "32": "color-dark/32/status/aether-warning.svg",
+          "48": "color-dark/48/status/aether-warning.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-warning.svg",
+          "24": "color-light/24/status/aether-warning.svg",
+          "32": "color-light/32/status/aether-warning.svg",
+          "48": "color-light/48/status/aether-warning.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-error",
+      "label": "Error",
+      "context": "status",
+      "aliases": [
+        "dialog-error"
+      ],
+      "meaning": "Error",
+      "state": "danger",
+      "files": {
+        "color-dark": "color-dark/status/aether-error.svg",
+        "color-light": "color-light/status/aether-error.svg",
+        "symbolic": "symbolic/status/aether-error-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-error.svg",
+          "24": "color-dark/24/status/aether-error.svg",
+          "32": "color-dark/32/status/aether-error.svg",
+          "48": "color-dark/48/status/aether-error.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-error.svg",
+          "24": "color-light/24/status/aether-error.svg",
+          "32": "color-light/32/status/aether-error.svg",
+          "48": "color-light/48/status/aether-error.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-success",
+      "label": "Supported success",
+      "context": "status",
+      "aliases": [
+        "emblem-ok",
+        "emblem-default"
+      ],
+      "meaning": "Use only when evidence supports the stated success",
+      "state": "success",
+      "files": {
+        "color-dark": "color-dark/status/aether-success.svg",
+        "color-light": "color-light/status/aether-success.svg",
+        "symbolic": "symbolic/status/aether-success-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-success.svg",
+          "24": "color-dark/24/status/aether-success.svg",
+          "32": "color-dark/32/status/aether-success.svg",
+          "48": "color-dark/48/status/aether-success.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-success.svg",
+          "24": "color-light/24/status/aether-success.svg",
+          "32": "color-light/32/status/aether-success.svg",
+          "48": "color-light/48/status/aether-success.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-pending",
+      "label": "Pending",
+      "context": "status",
+      "aliases": [
+        "appointment-soon",
+        "content-loading"
+      ],
+      "meaning": "Static pending mark; no guarantee of a queued or cancelable operation",
+      "state": null,
+      "files": {
+        "color-dark": "color-dark/status/aether-pending.svg",
+        "color-light": "color-light/status/aether-pending.svg",
+        "symbolic": "symbolic/status/aether-pending-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-pending.svg",
+          "24": "color-dark/24/status/aether-pending.svg",
+          "32": "color-dark/32/status/aether-pending.svg",
+          "48": "color-dark/48/status/aether-pending.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-pending.svg",
+          "24": "color-light/24/status/aether-pending.svg",
+          "32": "color-light/32/status/aether-pending.svg",
+          "48": "color-light/48/status/aether-pending.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-offline",
+      "label": "Offline or disconnected",
+      "context": "status",
+      "aliases": [
+        "network-offline"
+      ],
+      "meaning": "Disconnected ends, distinct from a failed command",
+      "state": "secondary",
+      "files": {
+        "color-dark": "color-dark/status/aether-offline.svg",
+        "color-light": "color-light/status/aether-offline.svg",
+        "symbolic": "symbolic/status/aether-offline-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-offline.svg",
+          "24": "color-dark/24/status/aether-offline.svg",
+          "32": "color-dark/32/status/aether-offline.svg",
+          "48": "color-dark/48/status/aether-offline.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-offline.svg",
+          "24": "color-light/24/status/aether-offline.svg",
+          "32": "color-light/32/status/aether-offline.svg",
+          "48": "color-light/48/status/aether-offline.svg"
+        }
+      }
+    },
+    {
+      "id": "aether-connected",
+      "label": "Connected",
+      "context": "status",
+      "aliases": [
+        "network-connect",
+        "emblem-shared"
+      ],
+      "meaning": "A connection observation, not proof of physical output",
+      "state": "success",
+      "files": {
+        "color-dark": "color-dark/status/aether-connected.svg",
+        "color-light": "color-light/status/aether-connected.svg",
+        "symbolic": "symbolic/status/aether-connected-symbolic.svg"
+      },
+      "sized_files": {
+        "color-dark": {
+          "16": "color-dark/16/status/aether-connected.svg",
+          "24": "color-dark/24/status/aether-connected.svg",
+          "32": "color-dark/32/status/aether-connected.svg",
+          "48": "color-dark/48/status/aether-connected.svg"
+        },
+        "color-light": {
+          "16": "color-light/16/status/aether-connected.svg",
+          "24": "color-light/24/status/aether-connected.svg",
+          "32": "color-light/32/status/aether-connected.svg",
+          "48": "color-light/48/status/aether-connected.svg"
+        }
+      }
+    }
+  ],
+  "aliases": {
+    "view-app-grid": "aether-library",
+    "applications-all": "aether-library",
+    "document-open-recent": "aether-recent",
+    "view-history": "aether-recent",
+    "preferences-desktop-workspaces": "aether-workspace",
+    "view-grid": "aether-workspace",
+    "preferences-system-windows": "aether-window",
+    "window": "aether-window",
+    "application-x-executable": "aether-application",
+    "application-default-icon": "aether-application",
+    "system-search": "aether-search",
+    "edit-find": "aether-search",
+    "user-home": "aether-home",
+    "go-home": "aether-home",
+    "open-menu": "aether-menu",
+    "view-list": "aether-menu",
+    "go-previous": "aether-back",
+    "go-next": "aether-forward",
+    "go-up": "aether-up",
+    "go-down": "aether-down",
+    "view-more": "aether-more",
+    "overflow-menu": "aether-more",
+    "list-add": "aether-add",
+    "add": "aether-add",
+    "list-remove": "aether-remove",
+    "window-close": "aether-close",
+    "object-select": "aether-check",
+    "dialog-ok": "aether-check",
+    "dialog-ok-apply": "aether-check",
+    "view-refresh": "aether-refresh",
+    "edit-undo": "aether-undo",
+    "edit-redo": "aether-redo",
+    "edit-copy": "aether-copy",
+    "transform-move": "aether-move",
+    "edit-move": "aether-move",
+    "document-save": "aether-save",
+    "document-open": "aether-open",
+    "document-edit": "aether-edit",
+    "edit": "aether-edit",
+    "preferences-system": "aether-settings",
+    "emblem-system": "aether-settings",
+    "system-shutdown": "aether-power",
+    "changes-prevent": "aether-lock",
+    "system-lock-screen": "aether-lock",
+    "changes-allow": "aether-unlock",
+    "view-fullscreen": "aether-fullscreen",
+    "view-restore": "aether-restore",
+    "view-filter": "aether-filter",
+    "view-sort-ascending": "aether-sort",
+    "folder": "aether-folder",
+    "inode-directory": "aether-folder",
+    "folder-open": "aether-folder-open",
+    "folder-music": "aether-folder-music",
+    "folder-download": "aether-folder-downloads",
+    "folder-downloads": "aether-folder-downloads",
+    "folder-documents": "aether-folder-documents",
+    "folder-pictures": "aether-folder-pictures",
+    "folder-videos": "aether-folder-video",
+    "folder-development": "aether-folder-projects",
+    "application-x-archive": "aether-archive",
+    "application-zip": "aether-archive",
+    "user-trash": "aether-trash",
+    "edit-delete": "aether-trash",
+    "text-x-generic": "aether-document",
+    "application-pdf": "aether-document",
+    "unknown": "aether-document",
+    "text-plain": "aether-document-text",
+    "text-x-readme": "aether-document-text",
+    "x-office-document": "aether-document-text",
+    "text-x-script": "aether-document-code",
+    "text-x-python": "aether-document-code",
+    "text-html": "aether-document-code",
+    "audio-x-generic": "aether-document-audio",
+    "image-x-generic": "aether-document-image",
+    "video-x-generic": "aether-document-video",
+    "x-office-spreadsheet": "aether-document-table",
+    "package-x-generic": "aether-package",
+    "computer": "aether-computer",
+    "computer-desktop": "aether-computer",
+    "video-display": "aether-display",
+    "preferences-desktop-display": "aether-display",
+    "computer-laptop": "aether-laptop",
+    "input-keyboard": "aether-keyboard",
+    "input-mouse": "aether-mouse",
+    "audio-headphones": "aether-headphones",
+    "audio-input-microphone": "aether-microphone",
+    "audio-speakers": "aether-speaker",
+    "camera-photo": "aether-camera",
+    "camera-web": "aether-camera",
+    "drive-harddisk": "aether-storage",
+    "drive-harddisk-system": "aether-storage",
+    "drive-removable-media": "aether-usb",
+    "usb": "aether-usb",
+    "battery": "aether-battery",
+    "printer": "aether-printer",
+    "input-gaming": "aether-gamepad",
+    "applications-development": "aether-development",
+    "applications-games": "aether-games",
+    "applications-graphics": "aether-graphics",
+    "applications-internet": "aether-network",
+    "network-workgroup": "aether-network",
+    "applications-multimedia": "aether-media",
+    "applications-office": "aether-office",
+    "applications-system": "aether-system",
+    "cpu": "aether-system",
+    "applications-utilities": "aether-utilities",
+    "applications-other": "aether-utilities",
+    "applications-audio": "aether-music",
+    "accessories-calculator": "aether-calculator",
+    "io.aether.calc-menu": "aether-calculator",
+    "multimedia-volume-control": "aether-audio-console",
+    "audio-card": "aether-audio-console",
+    "io.aether.audio-menu": "aether-audio-console",
+    "network-wireless": "aether-wifi",
+    "io.aether.wifi-menu": "aether-wifi",
+    "bluetooth": "aether-bluetooth",
+    "preferences-system-bluetooth": "aether-bluetooth",
+    "io.aether.bt-menu": "aether-bluetooth",
+    "video-television": "aether-cast",
+    "io.aether.cast-menu": "aether-cast",
+    "preferences-desktop-remote-desktop": "aether-remote",
+    "io.aether.remote-menu": "aether-remote",
+    "preferences-desktop-keyboard-shortcuts": "aether-keybinds",
+    "io.aether.keybind-guide": "aether-keybinds",
+    "dialog-information": "aether-info",
+    "dialog-warning": "aether-warning",
+    "dialog-error": "aether-error",
+    "emblem-ok": "aether-success",
+    "emblem-default": "aether-success",
+    "appointment-soon": "aether-pending",
+    "content-loading": "aether-pending",
+    "network-offline": "aether-offline",
+    "network-connect": "aether-connected",
+    "emblem-shared": "aether-connected"
+  },
+  "notes": [
+    "Symbolic variants append -symbolic to primary IDs and aliases.",
+    "Only generic noun/action/protocol signs; no branded app logos.",
+    "Quantitative battery/signal/volume and evidence-specific states require live adapters."
+  ]
+}

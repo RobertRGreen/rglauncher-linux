@@ -1,0 +1,1041 @@
+#!/usr/bin/env python3
+"""Cyberpunk wifi popout menu (waybar network module on-click).
+
+Uses NetworkManager on the system bus for wlan0. An asynchronous SecretAgent
+supplies missing wireless passwords while GTK continues dispatching events.
+NetworkManager stores system-owned secrets; this menu is not a keyring.
+Only one popout at a time: flock on $XDG_RUNTIME_DIR/wifi-menu.lock.
+"""
+
+import fcntl
+import os
+import sys
+import threading
+from pathlib import Path
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib, GtkLayerShell, Pango
+
+# Native dbus-python GLib adapter, needed to dispatch SecretAgent callbacks.
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
+import dbus
+import dbus.service
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _cyber_particles import install_particles
+import _wifi_secondary as secondary
+from _cyber_theme import (
+    rgba, scanline_background, chromatic_shadow,
+    BG, BG_CARD, BG_HOT, FG, ACCENT, ACCENT2, PURPLE, MUTED, LINE,
+    FONT_HEAD, FONT_BODY, PULSE_TIMING, pulse_keyframes, blink_keyframes,
+)
+
+NM = "org.freedesktop.NetworkManager"
+NM_PATH = "/org/freedesktop/NetworkManager"
+DEVICE = NM + ".Device"
+WIRELESS = DEVICE + ".Wireless"
+AP = NM + ".AccessPoint"
+SETTINGS = NM + ".Settings"
+CONNECTION = SETTINGS + ".Connection"
+ACTIVE = NM + ".Connection.Active"
+AGENT_PATH = NM_PATH + "/SecretAgent"
+AGENT_IFACE = NM + ".SecretAgent"
+SECURITY = "802-11-wireless-security"
+WIFI = "802-11-wireless"
+
+
+CARD_W = 480
+ROW_H = 58
+
+CSS = f"""
+window.wifi-root {{ background-color: transparent; }}
+
+{pulse_keyframes("wifi")}
+{blink_keyframes("wifi")}
+
+box.wifi-card {{
+    background-color: {BG};
+    background-image:
+        {scanline_background()},
+        linear-gradient(to bottom, {BG_CARD}, {BG});
+    border: 2.5px solid {PURPLE};
+    border-radius: 18px;
+    padding: 20px 24px;
+    animation: wifi-pulse 5s {PULSE_TIMING} infinite;
+}}
+
+label.wifi-title {{
+    color: {PURPLE};
+    font-family: "{FONT_HEAD}";
+    font-weight: bold;
+    font-size: 19px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px {rgba(PURPLE, 0.85)}, 0 0 18px {rgba(PURPLE, 0.45)};
+}}
+label.wifi-cursor {{
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    font-size: 19px;
+    text-shadow: 0 0 8px {rgba(ACCENT2, 0.85)};
+    animation: wifi-blink 1.1s steps(2, end) infinite;
+}}
+label.wifi-status {{
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px {rgba(ACCENT2, 0.5)};
+}}
+label.wifi-status.offline {{
+    color: {MUTED};
+    text-shadow: none;
+}}
+button.wifi-iconbtn, button.wifi-iconbtn:hover, button.wifi-iconbtn:active {{
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid {LINE};
+    border-radius: 8px;
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    padding: 2px 8px;
+    box-shadow: none;
+    text-shadow: none;
+}}
+button.wifi-iconbtn:hover {{
+    border-color: {ACCENT2};
+    box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.35)};
+}}
+button.wifi-iconbtn.active {{
+    border-color: {ACCENT2};
+    background-color: {BG_HOT};
+    box-shadow: 0 0 8px {rgba(ACCENT2, 0.25)};
+}}
+
+eventbox.wifi-row {{
+    background-color: {BG_CARD};
+}}
+box.wifi-row-inner {{
+    border: 1.5px solid {LINE};
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: {BG_CARD};
+    transition: all 120ms ease-out;
+}}
+box.wifi-row-inner.hover {{
+    border-color: {ACCENT2};
+    box-shadow: 0 0 16px 2px {rgba(ACCENT2, 0.40)};
+}}
+box.wifi-row-inner.connected {{
+    border-color: {FG};
+    background-color: {BG_HOT};
+    box-shadow: 0 0 18px 3px {rgba(FG, 0.35)};
+}}
+label.wifi-ssid {{
+    color: {FG};
+    font-family: "{FONT_BODY}";
+    font-size: 16px;
+}}
+box.wifi-row-inner.connected label.wifi-ssid {{
+    color: {FG};
+    font-weight: bold;
+    text-shadow: 0 0 6px {rgba(FG, 0.6)};
+}}
+label.wifi-meta {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 12px;
+}}
+label.wifi-signal {{
+    font-family: "{FONT_BODY}";
+    font-size: 16px;
+}}
+label.wifi-signal.strong {{
+    color: {FG};
+    text-shadow: 0 0 6px {rgba(FG, 0.6)};
+}}
+label.wifi-signal.mid {{
+    color: {ACCENT2};
+    text-shadow: 0 0 6px {rgba(ACCENT2, 0.5)};
+}}
+label.wifi-signal.weak {{
+    color: {ACCENT};
+    text-shadow: 0 0 6px {rgba(ACCENT, 0.5)};
+}}
+label.wifi-empty {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 13px;
+    padding: 24px;
+}}
+
+dialog.wifi-pass, window.wifi-pass {{
+    background-color: {BG};
+}}
+label.wifi-pass-label {{
+    color: {ACCENT};
+    font-family: "{FONT_BODY}";
+    font-weight: bold;
+    font-size: 13px;
+}}
+entry.wifi-pass-entry {{
+    background-color: {BG_CARD};
+    color: {FG};
+    border: 2px solid {PURPLE};
+    border-radius: 8px;
+    font-family: "{FONT_BODY}";
+    padding: 6px 10px;
+}}
+button.wifi-pass-btn, button.wifi-pass-btn:hover, button.wifi-pass-btn:active {{
+    background-image: none;
+    font-family: "{FONT_BODY}";
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 6px 16px;
+    box-shadow: none;
+    text-shadow: none;
+}}
+button.wifi-connect-btn {{
+    color: {FG};
+    border: 1px solid {FG};
+    background-color: {rgba(FG, 0.08)};
+}}
+button.wifi-connect-btn:hover {{
+    box-shadow: 0 0 10px 1px {rgba(FG, 0.35)};
+}}
+button.wifi-cancel-btn {{
+    color: {MUTED};
+    border: 1px solid {LINE};
+    background-color: transparent;
+}}
+
+label.wifi-title, button.wifi-pill.active, button.wifi-pill.on,
+button.wifi-iconbtn.active, box.wifi-row-inner.connected label {{
+    {chromatic_shadow()}
+}}
+"""
+
+
+def signal_bars(raw) -> tuple[str, str]:
+    """NetworkManager Strength is a percentage, 0..100."""
+    if raw is None:
+        return "----", "weak"
+    if raw >= 80:
+        return "████", "strong"
+    if raw >= 60:
+        return "███_", "strong"
+    if raw >= 40:
+        return "██__", "mid"
+    if raw >= 20:
+        return "█___", "weak"
+    return "____", "weak"
+
+
+def security_types(props):
+    """Key management from NM80211ApSecurityFlags (libnm headers)."""
+    flags = int(props.get("WpaFlags", 0)) | int(props.get("RsnFlags", 0))
+    kinds = set()
+    for mask, kind in ((0x100, "wpa-psk"), (0x200, "wpa-eap"),
+                       (0x400, "sae"), (0x800, "owe"),
+                       (0x1000, "owe"), (0x2000, "wpa-eap-suite-b-192")):
+        if flags & mask:
+            kinds.add(kind)
+    return kinds or {"none" if int(props.get("Flags", 0)) & 1 else "open"}
+
+
+class Canceled(dbus.DBusException):
+    _dbus_error_name = AGENT_IFACE + ".UserCanceled"
+
+
+class NoSecrets(dbus.DBusException):
+    _dbus_error_name = AGENT_IFACE + ".NoSecrets"
+
+
+class WifiAgent(dbus.service.Object):
+    def __init__(self, bus, request_passphrase_cb, cancel_cb):
+        super().__init__(bus, AGENT_PATH)
+        self._owner = bus.get_name_owner(NM)
+        self._request_passphrase_cb = request_passphrase_cb
+        self._cancel_cb = cancel_cb
+        self._pending = None
+
+    def _authorize(self, sender):
+        if sender != self._owner:
+            raise dbus.DBusException("Only NetworkManager may request secrets",
+                                     name="org.freedesktop.DBus.Error.AccessDenied")
+
+    @dbus.service.method(AGENT_IFACE, in_signature="a{sa{sv}}osasu",
+                         out_signature="a{sa{sv}}", sender_keyword="sender",
+                         async_callbacks=("reply", "error"))
+    def GetSecrets(self, connection, connection_path, setting_name, hints, flags,
+                   reply, error, sender=None):
+        self._authorize(sender)
+        security = connection.get(SECURITY, {})
+        key_mgmt = str(security.get("key-mgmt", ""))
+        if setting_name != SECURITY or key_mgmt not in ("wpa-psk", "sae", "none"):
+            error(NoSecrets("Only personal wireless secrets are supported"))
+            return
+        key = ("wep-key%d" % int(security.get("wep-tx-keyidx", 0))
+               if key_mgmt == "none" else "psk")
+        if security.get(key) and not int(flags) & 2:  # REQUEST_NEW
+            reply({SECURITY: {"name": SECURITY, key: security[key]}})
+            return
+        if not int(flags) & 1:  # ALLOW_INTERACTION
+            error(NoSecrets("No stored secret in this agent"))
+            return
+        if self._pending is not None:
+            error(NoSecrets("Another password prompt is open"))
+            return
+        pending = (str(connection_path), str(setting_name), error)
+        self._pending = pending
+        name = bytes(connection.get(WIFI, {}).get("ssid", b"")).decode("utf-8", "replace")
+
+        def prompt():
+            if self._pending is not pending:
+                return False
+            result = self._request_passphrase_cb(name or "network")
+            if self._pending is pending:
+                self._pending = None
+                if result:
+                    reply({SECURITY: {"name": SECURITY, key: result}})
+                else:
+                    error(Canceled("cancelled by user"))
+            return False
+
+        GLib.idle_add(prompt)
+
+    @dbus.service.method(AGENT_IFACE, in_signature="os", out_signature="",
+                         sender_keyword="sender")
+    def CancelGetSecrets(self, connection_path, setting_name, sender=None):
+        self._authorize(sender)
+        if self._pending and self._pending[:2] == (str(connection_path), str(setting_name)):
+            self.cancel()
+
+    def cancel(self):
+        if self._pending:
+            pending, self._pending = self._pending, None
+            self._cancel_cb("cancelled")
+            pending[2](Canceled("secret request cancelled"))
+
+    @dbus.service.method(AGENT_IFACE, in_signature="a{sa{sv}}o", out_signature="",
+                         sender_keyword="sender")
+    def SaveSecrets(self, connection, connection_path, sender=None):
+        self._authorize(sender)
+        raise NoSecrets("This menu does not store agent-owned secrets")
+
+    @dbus.service.method(AGENT_IFACE, in_signature="a{sa{sv}}o", out_signature="",
+                         sender_keyword="sender")
+    def DeleteSecrets(self, connection, connection_path, sender=None):
+        self._authorize(sender)
+        # There is no agent-owned secret storage to clear.
+
+
+class WifiMenu(Gtk.Window):
+    def __init__(self):
+        super().__init__()
+        self.bus = None
+        self.device_path = None
+        self.wireless = None
+        self.agent = None
+        self._agent_registered = False
+        self._active_dialog = None
+        self._busy = False
+        self._closed = False
+        self._mode = "primary"
+        self._secondary_loading = False
+        self._secondary_state = {}
+        self._build_ui()
+        GLib.timeout_add_seconds(3, self._poll_secondary)
+        if "--secondary" in sys.argv:
+            self._switch_mode("secondary")
+        else:
+            self._connect_nm()
+            self.refresh(rescan=True)
+
+    # -- NetworkManager plumbing -------------------------------------------
+
+    def _iface(self, path, iface):
+        return dbus.Interface(self.bus.get_object(NM, path), iface)
+
+    def _connect_nm(self):
+        try:
+            # NM and its AgentManager live on the SYSTEM bus. The agent must
+            # register on that same connection, not on the session bus.
+            self.bus = dbus.SystemBus()
+            self.manager = self._iface(NM_PATH, NM)
+            self.device_path = str(self.manager.GetDeviceByIpIface("wlan0"))
+            self.device = self._iface(self.device_path, DEVICE)
+            self.wireless = self._iface(self.device_path, WIRELESS)
+            self.agent = WifiAgent(self.bus, self._prompt_passphrase, self._agent_cancel)
+            self.agent_manager = self._iface(NM_PATH + "/AgentManager", NM + ".AgentManager")
+            self.agent_manager.Register("org.freedesktop.NetworkManager.wifi_menu")
+            self._agent_registered = True
+            # Activation returns before association completes; update on state
+            # and AP changes as well as after method replies.
+            self.bus.add_signal_receiver(
+                self._nm_changed, signal_name="PropertiesChanged",
+                dbus_interface=dbus.PROPERTIES_IFACE, bus_name=NM,
+                path=self.device_path)
+        except dbus.DBusException as e:
+            self.wireless = None
+            self._set_status(f"NetworkManager unavailable: {e.get_dbus_message()}", offline=True)
+
+    def _nm_changed(self, iface, changed, invalidated):
+        if iface in (DEVICE, WIRELESS) and not self._closed:
+            GLib.idle_add(self._load_and_render_once)
+
+    def _unregister_agent(self):
+        if self.agent:
+            self.agent.cancel()
+        if self._agent_registered:
+            try:
+                self.agent_manager.Unregister()
+            except dbus.DBusException:
+                pass
+            self._agent_registered = False
+        if self.agent:
+            self.agent.remove_from_connection()
+
+    def _props_for(self, path, iface):
+        return dict(self._iface(path, dbus.PROPERTIES_IFACE).GetAll(iface))
+
+    def refresh(self, rescan=False):
+        if self._mode == "secondary":
+            self._load_secondary(rescan)
+            return
+        if self.wireless is None or self._closed:
+            return
+        if rescan:
+            # A Waybar started by the user manager may have no active polkit
+            # session. Never open an admin-password prompt just to list Wi-Fi.
+            try:
+                allowed = self.manager.GetPermissions().get(
+                    "org.freedesktop.NetworkManager.wifi.scan") == "yes"
+            except dbus.DBusException:
+                allowed = False
+            if not allowed:
+                self._load_and_render_once()
+                return
+            def scanned(*_):
+                GLib.timeout_add(1800, self._load_and_render_once)
+            self.wireless.RequestScan(dbus.Dictionary({}, signature="sv"),
+                                      reply_handler=scanned, error_handler=scanned)
+        self._load_and_render_once()
+
+    def _load_and_render_once(self):
+        if self._mode == "secondary":
+            self._load_secondary()
+            return False
+        if not self._closed and self.wireless is not None:
+            self._load_networks()
+        return False
+
+    def _load_networks(self):
+        try:
+            device = self._props_for(self.device_path, DEVICE)
+            wireless = self._props_for(self.device_path, WIRELESS)
+            active_ap = str(wireless.get("ActiveAccessPoint", "/"))
+            active_path = str(device.get("ActiveConnection", "/"))
+            active = self._props_for(active_path, ACTIVE) if active_path != "/" else {}
+            connected = int(active.get("State", 0)) == 2
+            active_profile = str(active.get("Connection", "/"))
+            available = set(map(str, device.get("AvailableConnections", [])))
+            profiles = []
+            for path in self._iface(NM_PATH + "/Settings", SETTINGS).ListConnections():
+                if str(path) not in available and str(path) != active_profile:
+                    continue
+                try:
+                    settings = self._iface(path, CONNECTION).GetSettings()
+                    if settings.get("connection", {}).get("type") == WIFI:
+                        profiles.append((str(path), settings))
+                except dbus.DBusException:
+                    continue
+            rows = []
+            connected_name = None
+            for path in self.wireless.GetAllAccessPoints():
+                try:
+                    props = self._props_for(path, AP)
+                except dbus.DBusException:
+                    continue  # AP disappeared during the scan.
+                ssid = bytes(props.get("Ssid", b""))
+                name = ssid.decode("utf-8", "replace")
+                kinds = security_types(props)
+                matches = []
+                for profile, settings in profiles:
+                    wifi = settings.get(WIFI, {})
+                    kind = str(settings.get(SECURITY, {}).get("key-mgmt", "open"))
+                    bssid = ":".join(f"{int(byte):02x}" for byte in wifi.get("bssid", []))
+                    if (ssid and bytes(wifi.get("ssid", b"")) == ssid and kind in kinds
+                            and (not bssid or bssid.lower() == str(props.get("HwAddress", "")).lower())):
+                        matches.append(profile)
+                is_connected = connected and str(path) == active_ap
+                if is_connected:
+                    connected_name = name
+                    if active_profile != "/" and active_profile not in matches:
+                        matches.insert(0, active_profile)
+                matches.sort(key=lambda p: p != active_profile)
+                rows.append({"path": str(path), "name": name, "ssid": ssid,
+                             "type": "open" if kinds == {"open"} else "secured",
+                             "kinds": kinds, "profiles": matches,
+                             "connected": is_connected, "known": bool(matches),
+                             "signal": int(props.get("Strength", 0))})
+            rows.sort(key=lambda row: -row["signal"])
+            self._populate(rows)
+            if connected:
+                self._set_status(f"connected · {connected_name if connected_name is not None else active.get('Id', '')}")
+            else:
+                self._set_status("not connected", offline=True)
+        except dbus.DBusException as e:
+            self._set_status(f"NetworkManager: {e.get_dbus_message()}", offline=True)
+
+    # -- UI construction ----------------------------------------------------
+
+    def _build_ui(self):
+        self.get_style_context().add_class("wifi-root")
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_namespace(self, "wifi-menu")
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        # anchor all four edges (a full-screen, invisible-except-for-the-card
+        # surface) rather than just top+right hugging a corner. A
+        # corner-anchored surface has no way to notice "click elsewhere on
+        # the desktop" -- that click just goes straight to whatever's under
+        # it -- so closing had to ride on focus-out-event instead, which
+        # Hyprland's focus-follows-mouse fires the instant the pointer
+        # leaves the waybar module on its way to the popup, closing it
+        # before the click could ever land. A full backdrop lets us close
+        # on an explicit click outside the card instead, like the carousel
+        # menus do.
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.RIGHT,
+                     GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT):
+            GtkLayerShell.set_anchor(self, edge, True)
+
+        self.set_app_paintable(True)
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        # backdrop: unstyled EventBoxes over an RGBA toplevel show the real
+        # desktop through them (no CSS background painted), so this is
+        # invisible but still catches clicks -- click it anywhere and close.
+        backdrop = Gtk.EventBox()
+        backdrop.connect("button-press-event", lambda w, e: self.close_menu())
+        self.add(backdrop)
+
+        card_swallow = Gtk.EventBox()
+        card_swallow.connect("button-press-event", lambda w, e: True)  # don't bubble to backdrop
+        backdrop.add(card_swallow)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        card.get_style_context().add_class("wifi-card")
+        card.set_size_request(CARD_W, -1)
+        card.set_halign(Gtk.Align.END)
+        card.set_valign(Gtk.Align.START)
+        card.set_margin_top(44)
+        card.set_margin_end(10)
+        card_swallow.add(card)
+
+        header = Gtk.Box(spacing=8)
+        title = Gtk.Label(label="WIRELESS NETWORKS", xalign=0)
+        title.get_style_context().add_class("wifi-title")
+        header.pack_start(title, False, False, 0)
+        cursor = Gtk.Label(label="_", xalign=0)
+        cursor.get_style_context().add_class("wifi-cursor")
+        header.pack_start(cursor, True, True, 0)
+        refresh_btn = Gtk.Button(label="↻")
+        refresh_btn.get_style_context().add_class("wifi-iconbtn")
+        refresh_btn.connect("clicked", lambda *_: self.refresh(rescan=True))
+        header.pack_start(refresh_btn, False, False, 0)
+        card.pack_start(header, False, False, 0)
+
+        modes = Gtk.Box(spacing=8, homogeneous=True)
+        self.mode_buttons = {}
+        for key, label in (("primary", "PRIMARY INTERNET"), ("secondary", "SECONDARY NETWORK")):
+            button = Gtk.Button(label=label)
+            button.get_style_context().add_class("wifi-iconbtn")
+            button.set_size_request(-1, 40)
+            button.connect("clicked", lambda _button, mode=key: self._switch_mode(mode))
+            modes.pack_start(button, True, True, 0)
+            self.mode_buttons[key] = button
+        self.mode_buttons["primary"].get_style_context().add_class("active")
+        card.pack_start(modes, False, False, 0)
+
+        self.secondary_tools = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.secondary_tools.set_no_show_all(True)
+        note = Gtk.Label(label="Camera Wi-Fi · Internet stays on primary", xalign=0)
+        note.get_style_context().add_class("wifi-meta")
+        self.secondary_tools.pack_start(note, False, False, 0)
+        webcam_buttons = Gtk.Box(spacing=8, homogeneous=True)
+        settings_btn = Gtk.Button(label="STREAM SETTINGS")
+        settings_btn.get_style_context().add_class("wifi-iconbtn")
+        settings_btn.set_size_request(-1, 40)
+        settings_btn.connect("clicked", self._stream_settings)
+        webcam_buttons.pack_start(settings_btn, True, True, 0)
+        self.webcam_btn = Gtk.Button(label="START WEBCAM")
+        self.webcam_btn.get_style_context().add_class("wifi-iconbtn")
+        self.webcam_btn.set_size_request(-1, 40)
+        self.webcam_btn.connect("clicked", self._toggle_webcam)
+        webcam_buttons.pack_start(self.webcam_btn, True, True, 0)
+        self.secondary_tools.pack_start(webcam_buttons, False, False, 0)
+        preview_btn = Gtk.Button(label="PREVIEW CAMERA")
+        preview_btn.get_style_context().add_class("wifi-iconbtn")
+        preview_btn.set_size_request(-1, 36)
+        preview_btn.connect("clicked", self._preview_camera)
+        self.secondary_tools.pack_start(preview_btn, False, False, 0)
+        card.pack_start(self.secondary_tools, False, False, 0)
+
+        self.status_label = Gtk.Label(label="> scanning…", xalign=0)
+        self.status_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.status_label.set_max_width_chars(48)
+        self.status_label.get_style_context().add_class("wifi-status")
+        status_row = Gtk.Box(spacing=8)
+        status_row.pack_start(self.status_label, False, False, 0)
+        status_cursor = Gtk.Label(label="_")
+        status_cursor.get_style_context().add_class("wifi-cursor")
+        status_row.pack_start(status_cursor, False, False, 0)
+        card.pack_start(status_row, False, False, 0)
+
+        sep = Gtk.Separator()
+        card.pack_start(sep, False, False, 2)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        # set_max_content_height() + set_propagate_natural_height() alone
+        # doesn't reliably re-negotiate this scroller's height once rows
+        # are added after the first layout pass -- confirmed live (audio-menu
+        # build, 2026-09-15: instrumented with get_allocated_height(), stuck
+        # at ~150-380px regardless of the max given). A plain size request
+        # has no such ambiguity, so this now claims real, fixed real-estate
+        # instead of hoping natural-height propagation cooperates.
+        scroller.set_size_request(-1, 560)
+        self.rows_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        scroller.add(self.rows_box)
+        card.pack_start(scroller, True, True, 0)
+
+        hint = self.hint = Gtk.Label(
+            label="click: connect/disconnect · right-click: forget\nesc: close",
+            xalign=0)
+        hint.set_line_wrap(False)
+        hint.get_style_context().add_class("wifi-meta")
+        card.pack_start(hint, False, False, 0)
+
+        self.particle_layer = install_particles(card)
+
+        self.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.connect("key-press-event", self._on_key)
+        self.connect("destroy", lambda w: Gtk.main_quit())
+
+        self.show_all()
+
+    def _set_status(self, text, offline=False):
+        self.status_label.set_text("> " + text)
+        self.status_label.set_tooltip_text(text)
+        ctx = self.status_label.get_style_context()
+        if offline:
+            ctx.add_class("offline")
+        else:
+            ctx.remove_class("offline")
+
+    def _populate(self, rows):
+        for child in list(self.rows_box.get_children()):
+            self.rows_box.remove(child)
+        if not rows:
+            empty = Gtk.Label(label="no networks found", xalign=0.5)
+            empty.get_style_context().add_class("wifi-empty")
+            self.rows_box.pack_start(empty, False, False, 0)
+            self.rows_box.show_all()
+            return
+        for net in rows:
+            self.rows_box.pack_start(self._build_row(net), False, False, 0)
+        self.rows_box.show_all()
+
+    def _build_row(self, net):
+        inner = Gtk.Box(spacing=8)
+        inner.get_style_context().add_class("wifi-row-inner")
+        if net["connected"]:
+            inner.get_style_context().add_class("connected")
+        inner.set_size_request(-1, ROW_H)
+
+        bars, tier = signal_bars(net["signal"])
+        sig = Gtk.Label(label=bars)
+        sig.get_style_context().add_class("wifi-signal")
+        sig.get_style_context().add_class(tier)
+        sig.set_tooltip_text("Signal not reported" if net["signal"] is None else f'Signal {net["signal"]}%')
+        inner.pack_start(sig, False, False, 0)
+
+        name_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        name_lbl = Gtk.Label(label=net["name"] or "(hidden)", xalign=0)
+        name_lbl.get_style_context().add_class("wifi-ssid")
+        name_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        name_lbl.set_tooltip_text(net["name"] or "(hidden)")
+        name_col.pack_start(name_lbl, False, False, 0)
+        meta_bits = []
+        if net["type"] != "open":
+            meta_bits.append("secured")
+        else:
+            meta_bits.append("open")
+        if net["known"]:
+            meta_bits.append("saved")
+        if net["connected"]:
+            meta_bits.append("connected")
+        meta_lbl = Gtk.Label(label=" · ".join(meta_bits), xalign=0)
+        meta_lbl.get_style_context().add_class("wifi-meta")
+        name_col.pack_start(meta_lbl, False, False, 0)
+        inner.pack_start(name_col, True, True, 0)
+
+        row_status = Gtk.Label(label="")
+        row_status.get_style_context().add_class("wifi-meta")
+        inner.pack_start(row_status, False, False, 0)
+
+        evbox = Gtk.EventBox()
+        evbox.get_style_context().add_class("wifi-row")
+        evbox.add(inner)
+        evbox.add_events(Gdk.EventMask.BUTTON_PRESS_MASK
+                          | Gdk.EventMask.ENTER_NOTIFY_MASK
+                          | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        evbox.connect("enter-notify-event",
+                       lambda w, e: (inner.get_style_context().add_class("hover"), False)[1])
+        evbox.connect("leave-notify-event",
+                       lambda w, e: (inner.get_style_context().remove_class("hover"), False)[1])
+        evbox.connect("button-press-event", self._on_row_click, net, inner, row_status)
+        return evbox
+
+    # -- interaction --------------------------------------------------------
+
+    def _on_row_click(self, _widget, event, net, inner, row_status):
+        if self._mode == "secondary":
+            return self._secondary_click(event, net, row_status)
+        if self._busy:
+            return True
+        if event.button == 3 and net["known"]:
+            self._forget(net, row_status)
+            return True
+        if event.button != 1:
+            return True
+        if net["connected"]:
+            self._disconnect(row_status)
+            return True
+        if not net["ssid"]:
+            self._set_status("hidden network needs a configured profile", offline=True)
+            return True
+        row_status.set_text("connecting…")
+        self._busy = True
+        callbacks = dict(reply_handler=lambda *args: self._on_connect_done(row_status, None),
+                         error_handler=lambda e: self._on_connect_done(row_status, e))
+        if net["profiles"]:
+            self.manager.ActivateConnection(net["profiles"][0], self.device_path,
+                                            net["path"], **callbacks)
+        else:
+            # Supply system-owned secret flags (0); NM persists passwords.
+            # NM completes unspecified connection/IP settings for this AP.
+            settings = {"connection": {"id": net["name"], "type": WIFI,
+                                        "interface-name": "wlan0"},
+                        WIFI: {"ssid": dbus.ByteArray(net["ssid"]), "mode": "infrastructure"}}
+            kinds = net["kinds"]
+            kind = next((k for k in ("sae", "wpa-psk", "owe", "none", "open") if k in kinds), None)
+            if kind is None:
+                self._on_connect_done(row_status, "enterprise network needs a configured profile")
+                return True
+            if kind != "open":
+                settings[SECURITY] = {"key-mgmt": kind}
+                if kind in ("wpa-psk", "sae"):
+                    settings[SECURITY]["psk-flags"] = dbus.UInt32(0)
+                elif kind == "none":
+                    settings[SECURITY]["wep-key-flags"] = dbus.UInt32(0)
+            self.manager.AddAndActivateConnection(
+                dbus.Dictionary(settings, signature="sa{sv}"), self.device_path,
+                net["path"], **callbacks)
+        return True
+
+    def _on_connect_done(self, row_status, error):
+        self._busy = False
+        if self._closed:
+            return False
+        self.refresh(rescan=False)
+        if error:
+            row_status.set_text("failed")
+            message = error.get_dbus_message() if isinstance(error, dbus.DBusException) else str(error)
+            self._set_status(message, offline=True)
+        else:
+            GLib.timeout_add(1800, self._load_and_render_once)
+        return False
+
+    def _disconnect(self, row_status):
+        row_status.set_text("disconnecting…")
+        self._busy = True
+        self.device.Disconnect(
+            reply_handler=lambda: self._on_connect_done(row_status, None),
+            error_handler=lambda e: self._on_connect_done(row_status, e))
+
+    def _forget(self, net, row_status):
+        row_status.set_text("forgetting…")
+        self._busy = True
+        profiles = iter(net["profiles"])
+
+        def delete_next():
+            path = next(profiles, None)
+            if path is None:
+                self._on_connect_done(row_status, None)
+            else:
+                self._iface(path, CONNECTION).Delete(
+                    reply_handler=delete_next,
+                    error_handler=lambda e: self._on_connect_done(row_status, e))
+
+        delete_next()
+
+    def _prompt_passphrase(self, name):
+        """Runs on the GTK thread, scheduled by SecretAgent.GetSecrets."""
+        dialog = Gtk.Dialog(transient_for=self, modal=True, destroy_with_parent=True)
+        dialog.set_decorated(False)
+        dialog.get_style_context().add_class("wifi-pass")
+        GtkLayerShell.init_for_window(dialog)
+        GtkLayerShell.set_layer(dialog, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(dialog, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(10)
+        box.set_border_width(18)
+        label = Gtk.Label(label=f"passphrase for {name}", xalign=0)
+        label.get_style_context().add_class("wifi-pass-label")
+        box.add(label)
+        entry = Gtk.Entry(visibility=False, activates_default=True)
+        entry.get_style_context().add_class("wifi-pass-entry")
+        box.add(entry)
+
+        cancel_btn = dialog.add_button("CANCEL", Gtk.ResponseType.CANCEL)
+        cancel_btn.get_style_context().add_class("wifi-pass-btn")
+        cancel_btn.get_style_context().add_class("wifi-cancel-btn")
+        connect_btn = dialog.add_button("CONNECT", Gtk.ResponseType.OK)
+        connect_btn.get_style_context().add_class("wifi-pass-btn")
+        connect_btn.get_style_context().add_class("wifi-connect-btn")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+
+        self._active_dialog = dialog
+        dialog.show_all()
+        entry.grab_focus()
+        response = dialog.run()
+        text = entry.get_text()
+        dialog.destroy()
+        self._active_dialog = None
+
+        if response == Gtk.ResponseType.OK and text:
+            return text
+        return None
+
+    def _agent_cancel(self, _reason):
+        if self._active_dialog is not None:
+            GLib.idle_add(self._active_dialog.response, Gtk.ResponseType.CANCEL)
+
+    def _on_key(self, _widget, event):
+        if Gdk.keyval_name(event.keyval) == "Escape":
+            self.close_menu()
+            return True
+        return False
+
+    def _switch_mode(self, mode):
+        if self._busy or self._mode == mode:
+            return
+        self._mode = mode
+        for key, button in self.mode_buttons.items():
+            context = button.get_style_context()
+            (context.add_class if key == mode else context.remove_class)("active")
+        if mode == "secondary":
+            self.secondary_tools.set_no_show_all(False)
+            self.secondary_tools.show_all()
+            self.hint.set_text("click: connect/disconnect · right-click: forget\nesc: close")
+        else:
+            self.secondary_tools.hide()
+            self.secondary_tools.set_no_show_all(True)
+            self.hint.set_text("click: connect/disconnect · right-click: forget\nesc: close")
+            if self.bus is None:
+                self._connect_nm()
+        self._populate([])
+        self.particle_layer.queue_resize()
+        self.particle_layer.get_parent().queue_resize()
+        self._set_status("scanning…")
+        self.refresh(rescan=True)
+
+    def _poll_secondary(self):
+        if self._closed:
+            return False
+        if self._mode == "secondary" and not self._busy:
+            self._load_secondary()
+        return True
+
+    def _load_secondary(self, rescan=False):
+        if self._closed or self._secondary_loading or self._busy:
+            return
+        self._secondary_loading = True
+        def worker():
+            try:
+                if rescan:
+                    secondary.request("SCAN")
+                rows, state = secondary.networks()
+                active = secondary.stream_active()
+                live = secondary.stream_live(state) if active else False
+                error = None
+            except Exception as exc:
+                rows, state, active, live, error = [], {}, False, False, str(exc)
+            def done():
+                self._secondary_loading = False
+                if self._closed or self._mode != "secondary":
+                    return False
+                self._secondary_state = state
+                self.webcam_btn.set_label("STOP WEBCAM" if active else "START WEBCAM")
+                self._populate(rows)
+                if error:
+                    self._set_status(error, offline=True)
+                    return False
+                name = state.get("ssid_bytes", b"").decode("utf-8", "replace")
+                if state.get("wpa_state") == "COMPLETED":
+                    address = state.get("ip_address") or "getting IP address…"
+                    label = "WEBCAM LIVE" if live else ("WAITING FOR VIDEO" if active else "WI-FI CONNECTED")
+                    self._set_status(f"{label} · {name}")
+                    self.status_label.set_tooltip_text(f"{label} · {name} · {address}\nSelect Wi-Fi Camera in your app.")
+                elif state.get("wpa_state") in ("ASSOCIATING", "ASSOCIATED", "4WAY_HANDSHAKE", "GROUP_HANDSHAKE"):
+                    self._set_status(f"connecting · {name}")
+                else:
+                    self._set_status("scanning…" if rescan else "select a camera network", offline=not rescan)
+                return False
+            GLib.idle_add(done)
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _secondary_operation(self, operation, message):
+        if self._busy:
+            return
+        self._busy = True
+        self._set_status(message)
+        def worker():
+            try:
+                operation()
+                error = None
+            except Exception as exc:
+                error = str(exc)
+            def done():
+                self._busy = False
+                if not self._closed:
+                    if error:
+                        self._set_status(error, offline=True)
+                    else:
+                        self._load_secondary()
+                return False
+            GLib.idle_add(done)
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _secondary_click(self, event, net, row_status):
+        if self._busy:
+            return True
+        if event.button == 3 and net["known"]:
+            self._secondary_operation(lambda: secondary.forget(net["ssid"]), "forgetting camera network…")
+        elif event.button == 1:
+            if net["connected"]:
+                self._secondary_operation(secondary.disconnect, "disconnecting camera…")
+            else:
+                password = None
+                if net["kind"] == "wpa-psk":
+                    profile = secondary.profiles().get(net["ssid"].hex(), {})
+                    if not profile.get("psk"):
+                        password = self._prompt_passphrase(net["name"])
+                        if password is None:
+                            return True
+                self._secondary_operation(lambda: secondary.connect(net, password), "connecting to camera…")
+        return True
+
+    def _stream_settings(self, *_args):
+        ssid = self._secondary_state.get("ssid_bytes", b"")
+        if not ssid or self._secondary_state.get("wpa_state") != "COMPLETED":
+            self._set_status("Connect to a camera network first", offline=True)
+            return
+        dialog = Gtk.Dialog(transient_for=self, modal=True, destroy_with_parent=True)
+        dialog.set_decorated(False)
+        dialog.get_style_context().add_class("wifi-pass")
+        GtkLayerShell.init_for_window(dialog)
+        GtkLayerShell.set_layer(dialog, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(dialog, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+        box = dialog.get_content_area()
+        box.set_spacing(12)
+        box.set_border_width(18)
+        label = Gtk.Label(label="VIDEO STREAM · " + ssid.decode("utf-8", "replace"), xalign=0)
+        label.get_style_context().add_class("wifi-pass-label")
+        box.add(label)
+        hint = Gtk.Label(label="Enter the camera's RTSP / HTTP video URL.\nSaved for this network. In your app, select Wi-Fi Camera.", xalign=0)
+        hint.get_style_context().add_class("wifi-meta")
+        box.add(hint)
+        entry = Gtk.Entry(activates_default=True)
+        entry.set_width_chars(48)
+        entry.set_placeholder_text("rtsp://camera-address/video")
+        entry.set_text(secondary.profiles().get(ssid.hex(), {}).get("stream_url", ""))
+        entry.get_style_context().add_class("wifi-pass-entry")
+        box.add(entry)
+        for label, response in (("CANCEL", Gtk.ResponseType.CANCEL), ("SAVE", Gtk.ResponseType.OK)):
+            button = dialog.add_button(label, response)
+            button.get_style_context().add_class("wifi-pass-btn")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        self._active_dialog = dialog
+        dialog.show_all()
+        entry.grab_focus()
+        response = dialog.run()
+        url = entry.get_text().strip()
+        dialog.destroy()
+        self._active_dialog = None
+        if response == Gtk.ResponseType.OK:
+            try:
+                secondary.save_stream_url(ssid, url)
+                self._set_status("stream saved · click START WEBCAM")
+            except Exception as exc:
+                self._set_status(str(exc), offline=True)
+
+    def _toggle_webcam(self, *_args):
+        def toggle():
+            if secondary.stream_active():
+                secondary.stop_stream()
+            else:
+                secondary.start_stream()
+        self._secondary_operation(toggle, "updating webcam…")
+
+    def _preview_camera(self, *_args):
+        def preview():
+            if not secondary.stream_active():
+                secondary.start_stream()
+            if not secondary.stream_live(secondary.status()):
+                raise RuntimeError("Waiting for live video from the camera")
+            subprocess.Popen(["ffplay", "-hide_banner", "-loglevel", "error",
+                              "-fflags", "nobuffer", "-flags", "low_delay", "-framedrop",
+                              "-window_title", "OPENCAM · Camera preview",
+                              "-f", "video4linux2", "-i", "/dev/video11"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+        self._secondary_operation(preview, "opening camera preview…")
+
+    def close_menu(self):
+        self._closed = True
+        self._unregister_agent()
+        self.destroy()
+
+
+def main():
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    lock_path = Path(runtime_dir) / "wifi-menu.lock"
+    lock_file = open(lock_path, "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return  # already open somewhere -- don't stack a second popup
+
+    win = WifiMenu()
+    win.connect("destroy", Gtk.main_quit)
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

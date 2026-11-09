@@ -1,0 +1,15 @@
+[Unit]
+Description=Verify and update RGLauncher Linux managed releases
+
+[Service]
+Type=oneshot
+ExecStart=@RG_LAUNCHER@ update apply --automatic
+Environment=PYTHONDONTWRITEBYTECODE=1
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@DATA_DIR@ @STATE_DIR@
+TimeoutStartSec=15min

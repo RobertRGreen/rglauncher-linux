@@ -1,0 +1,100 @@
+// Generic RGLauncher defaults. Existing user configuration takes precedence.
+{
+  "layer": "top",
+  "position": "bottom",
+  "height": 48,
+  "spacing": 3,
+  "margin-top": 0,
+  "margin-bottom": 8,
+  "margin-left": 12,
+  "margin-right": 12,
+  "exclusive": false,
+  "modules-left": [
+    "custom/apps",
+    "custom/files",
+    "custom/windows",
+    "hyprland/workspaces",
+    "hyprland/window"
+  ],
+  "modules-center": [
+    "clock"
+  ],
+  "modules-right": [
+    "pulseaudio",
+    "network",
+    "bluetooth",
+    "memory",
+    "custom/settings",
+    "tray"
+  ],
+  "custom/apps": {
+    "format": "Apps",
+    "tooltip-format": "Open applications \u00b7 Super+Space",
+    "on-click": "rglauncher apps"
+  },
+  "custom/files": {
+    "format": "Files",
+    "tooltip-format": "Browse files \u00b7 Super+D",
+    "on-click": "rglauncher files"
+  },
+  "custom/windows": {
+    "format": "Windows",
+    "tooltip-format": "Switch windows \u00b7 Alt+Tab or Super+Tab",
+    "on-click": "rglauncher windows"
+  },
+  "custom/settings": {
+    "format": "Settings",
+    "tooltip-format": "RGLauncher settings and software updates",
+    "on-click": "rglauncher settings"
+  },
+  "hyprland/workspaces": {
+    "format": "{name}",
+    "on-click": "activate",
+    "all-outputs": false,
+    "disable-scroll": true,
+    "sort-by-number": true
+  },
+  "hyprland/window": {
+    "format": "{}",
+    "max-length": 28,
+    "separate-outputs": true,
+    "rewrite": {
+      "^$": "No active window"
+    }
+  },
+  "clock": {
+    "format": "{:%H:%M}",
+    "format-alt": "{:%a %d %b %H:%M}",
+    "tooltip-format": "{:%A, %d %B %Y}"
+  },
+  "pulseaudio": {
+    "format": "Audio {volume}%",
+    "format-muted": "Audio muted",
+    "format-bluetooth": "Audio {volume}%",
+    "tooltip-format": "Open Audio Console",
+    "on-click": "rglauncher audio"
+  },
+  "network": {
+    "format-wifi": "Wi-Fi {signalStrength}%",
+    "format-ethernet": "Wired",
+    "format-disconnected": "Offline",
+    "tooltip-format": "Open network controls",
+    "on-click": "rglauncher wifi"
+  },
+  "bluetooth": {
+    "format": "Bluetooth",
+    "format-disabled": "BT off",
+    "format-connected": "BT {num_connections}",
+    "tooltip-format": "Open Bluetooth controls",
+    "on-click": "rglauncher bluetooth"
+  },
+  "memory": {
+    "format": "RAM {percentage}%",
+    "interval": 10,
+    "tooltip": true
+  },
+  "tray": {
+    "icon-size": 20,
+    "spacing": 10
+  }
+}

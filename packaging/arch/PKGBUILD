@@ -1,0 +1,66 @@
+# Maintainer: Robert R. Green and contributors
+# Local binary recipe: build the curated runtime archive first, then supply its
+# independently verified SHA256 in RGL_SOURCE_SHA256. No public URL is invented.
+pkgname=rglauncher-linux
+pkgver=0.2.0alpha1
+pkgrel=1
+_release=0.2.0-alpha.1
+pkgdesc='Instrument/Score Aether desktop shell for Hyprland and Waybar'
+arch=('x86_64')
+license=('MIT')
+depends=('hyprland>=0.56' 'waybar>=0.15' 'python>=3.12'
+         'python-cryptography>=41' 'python-gobject' 'python-cairo' 'python-dbus'
+         'python-numpy' 'gtk3' 'gtk4' 'gtk-layer-shell'
+         'thunar' 'kitty' 'networkmanager' 'bluez' 'polkit'
+         'pipewire' 'pipewire-pulse' 'wireplumber' 'libpulse'
+         'noto-fonts' 'ttf-jetbrains-mono-nerd')
+optdepends=('alsa-utils: supported hardware mixer controls'
+            'hyprpolkitagent: session authentication prompts'
+            'xdg-desktop-portal-hyprland: desktop portal integration'
+            'xdg-desktop-portal-gtk: GTK portal file chooser'
+            'qt5ct: Qt5 native theme adapter'
+            'qt6ct: Qt6 native theme adapter'
+            'tk: original ttk adapter'
+            'wl-clipboard: calculator result copy'
+            'code: optional VS Code theme use'
+            'ffmpeg: explicitly configured secondary video preview')
+options=('!strip' '!debug')
+source=("${pkgname}-${_release}-linux-x86_64.tar.gz")
+sha256sums=("${RGL_SOURCE_SHA256:?Set RGL_SOURCE_SHA256 to the verified local release archive SHA256}")
+
+prepare() {
+  [[ "$RGL_SOURCE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]] || return 1
+  [[ -f "$srcdir/bin/rglauncher" && -f "$srcdir/rglauncher_linux/cli.py" ]] || return 1
+  [[ -f "$srcdir/share/waybar/waybar" && -f "$srcdir/share/waybar/backend.json" ]] || {
+    error 'Build a target-Arch runtime archive with the pinned native Waybar backend first.'
+    return 1
+  }
+}
+
+package() {
+  local destination="$pkgdir/usr/lib/rglauncher-linux"
+  install -dm755 "$destination"
+  # Exact curated archive roots; no source checkout, user state or build cache.
+  cp -a "$srcdir/bin" "$srcdir/rglauncher_linux" "$srcdir/share" \
+    "$srcdir/systemd" "$srcdir/docs" "$srcdir/LICENSE" \
+    "$srcdir/THIRD_PARTY_NOTICES" "$srcdir/README.md" "$destination/"
+  install -Dm644 "$srcdir/packaging/waybar/LICENSE.Waybar" \
+    "$destination/packaging/waybar/LICENSE.Waybar"
+  install -dm755 "$pkgdir/usr/bin"
+  cat > "$pkgdir/usr/bin/rglauncher" <<'WRAPPER'
+#!/bin/sh
+managed="${XDG_DATA_HOME:-$HOME/.local/share}/rglauncher-linux/current"
+if [ -f "$managed/bin/rglauncher" ]; then
+  exec /usr/bin/python3 -B "$managed/bin/rglauncher" "$@"
+fi
+exec /usr/bin/python3 -B /usr/lib/rglauncher-linux/bin/rglauncher "$@"
+WRAPPER
+  chmod 755 "$pkgdir/usr/bin/rglauncher"
+  install -dm755 "$pkgdir/usr/share/applications" "$pkgdir/usr/share/icons"
+  install -m644 "$srcdir"/share/applications/rglauncher-*.desktop "$pkgdir/usr/share/applications/"
+  cp -a "$srcdir/share/icons/aether-score" "$srcdir/share/icons/aether-score-light" "$pkgdir/usr/share/icons/"
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$srcdir/packaging/waybar/LICENSE.Waybar" "$pkgdir/usr/share/licenses/$pkgname/LICENSE.Waybar"
+  install -Dm644 "$srcdir/THIRD_PARTY_NOTICES" "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_NOTICES"
+  # No post_install hook enables services, rewrites user config or selects a session.
+}

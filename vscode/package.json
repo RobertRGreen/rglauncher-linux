@@ -1,0 +1,25 @@
+{
+  "name": "rglauncher-aether",
+  "displayName": "RGLauncher: Instrument/Score Aether",
+  "description": "A composed Instrument/Score Aether workbench, readable syntax, and original file icons for VS Code and Code OSS.",
+  "version": "0.1.0",
+  "publisher": "rglauncher",
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Themes"],
+  "keywords": ["theme", "aether", "instrument", "score", "accessible", "dark", "light"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": true },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "themes": [
+      { "id": "RGLauncher Aether Night", "label": "RGLauncher Aether Night", "uiTheme": "vs-dark", "path": "./themes/aether-night.json" },
+      { "id": "RGLauncher Aether Opaque", "label": "RGLauncher Aether Opaque", "uiTheme": "vs-dark", "path": "./themes/aether-opaque.json" },
+      { "id": "RGLauncher Aether Day", "label": "RGLauncher Aether Day", "uiTheme": "vs", "path": "./themes/aether-day.json" }
+    ],
+    "iconThemes": [
+      { "id": "rglauncher-aether-files", "label": "RGLauncher Aether Files", "path": "./icons/aether-file-icons.json" }
+    ]
+  }
+}

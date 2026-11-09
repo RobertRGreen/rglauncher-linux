@@ -1,0 +1,30 @@
+RGLauncher: Linux Edition — third-party notices
+
+Original RGLauncher code, Instrument/Score Aether SVG sources, palette snapshots,
+local Waybar patches and original VS Code theme assets are MIT licensed under
+the project's LICENSE, copyright 2026 Robert R Green and contributors.
+No upstream icon paths or branded application logos were copied into the
+original icon family. Conventional interface/protocol symbols do not grant
+trademark rights. Preserve assets/icons/LICENSE in source redistributions.
+
+Waybar 0.15.0
+  Upstream: https://github.com/Alexays/Waybar
+  Pinned source: 90b209add8937514d0a987aa842e701bd8f1232e
+  License: MIT, copyright (c) 2025 Alex.
+  Complete upstream license: packaging/waybar/LICENSE.Waybar.
+  An optional native backend carries two local MIT compatibility patches.
+  Source and build instructions: packaging/waybar/README.md (source edition).
+  Do not remove the upstream notice when redistributing that binary.
+
+System dependencies are not vendored by the Python/icon release builder.
+Hyprland, GTK/gtkmm, GtkLayerShell, Qt, librsvg, Cairo, Pango, PipeWire,
+PulseAudio, NetworkManager, BlueZ, Thunar, Kitty, Python, cryptography,
+Ed25519 implementation dependencies and optional Waybar modules retain their
+respective licenses. Distribution packages must satisfy the licenses of the
+actual linked/redistributed dependencies; this notice does not relicense them.
+
+Fallback icon themes and application brand icons are external system resources,
+not original assets redistributed as part of this icon family. The optional
+VS Code extension has its own self-contained MIT license and provenance.
+Screenshots, fonts, personal configuration, recordings, credentials and signing
+private keys are not inputs to this release recipe.

@@ -1,0 +1,100 @@
+{
+  "original_code_license": "MIT",
+  "capture": "Explicit source-only allowlist; no user configuration or runtime state",
+  "components": [
+    {
+      "path": "bin/rofi-launcher",
+      "source_sha256": "971514244baa6e992c8689d2a7480c26eca8b44e2309d820c76282ff4f494981",
+      "packaged_sha256": "971514244baa6e992c8689d2a7480c26eca8b44e2309d820c76282ff4f494981"
+    },
+    {
+      "path": "bin/hypr-windows",
+      "source_sha256": "bb71bd9d2d5d26ae40e1cc07a313469ae82d55c13670c058dcedd146fc4db2b2",
+      "packaged_sha256": "bb71bd9d2d5d26ae40e1cc07a313469ae82d55c13670c058dcedd146fc4db2b2"
+    },
+    {
+      "path": "bin/calc-menu",
+      "source_sha256": "6637ad953ddb39b91334db3f7c74007d018823bbfb06c8dd0b5ec0bcce4aa235",
+      "packaged_sha256": "6637ad953ddb39b91334db3f7c74007d018823bbfb06c8dd0b5ec0bcce4aa235"
+    },
+    {
+      "path": "bin/audio-menu",
+      "source_sha256": "c94f66a7b51d5a7bc0ed0d2b6aece8a846d62737dfec75472d31a0bb86add79a",
+      "packaged_sha256": "b224dfc2d22578f0032b3dbf45b3b8bc036b725efc23c3183a79bfef6bcd133f"
+    },
+    {
+      "path": "bin/wifi-menu",
+      "source_sha256": "75e24c3e94c60e452d4ebcbf778e622950431d1e5ba68715bb7dca0997b5b7f4",
+      "packaged_sha256": "75e24c3e94c60e452d4ebcbf778e622950431d1e5ba68715bb7dca0997b5b7f4"
+    },
+    {
+      "path": "bin/bt-menu",
+      "source_sha256": "46cdda05c22a2ca69a2a6ca91a6c11e5556d0dad11c14b8400cffa62bdea1834",
+      "packaged_sha256": "46cdda05c22a2ca69a2a6ca91a6c11e5556d0dad11c14b8400cffa62bdea1834"
+    },
+    {
+      "path": "bin/_aether_score.py",
+      "source_sha256": "d8f608f4d4cb0efe9e9d5d109ee30f55ae61fb1a2a11c20d6c52154071909fdb",
+      "packaged_sha256": "d8f608f4d4cb0efe9e9d5d109ee30f55ae61fb1a2a11c20d6c52154071909fdb"
+    },
+    {
+      "path": "bin/_aether_surfaces.py",
+      "source_sha256": "247c0585240a82055e0ad8bd45928ce1ea8942ab1d5edc6f2d5fb3bccdff4d74",
+      "packaged_sha256": "247c0585240a82055e0ad8bd45928ce1ea8942ab1d5edc6f2d5fb3bccdff4d74"
+    },
+    {
+      "path": "bin/_aether_material.py",
+      "source_sha256": "3a42f55f0ee25280217bfb83379913033b0ec2beb49aa2505b962d3db44ddf1e",
+      "packaged_sha256": "3a42f55f0ee25280217bfb83379913033b0ec2beb49aa2505b962d3db44ddf1e"
+    },
+    {
+      "path": "bin/_cyber_theme.py",
+      "source_sha256": "a9c2d0f7d1d6991684b6fb3275f9c955642a643696fea27f07301b6a3761ba26",
+      "packaged_sha256": "a9c2d0f7d1d6991684b6fb3275f9c955642a643696fea27f07301b6a3761ba26"
+    },
+    {
+      "path": "bin/_cyber_gtk.py",
+      "source_sha256": "8ab466cc74b8e499cdf6b18fe92b1e686dacfdd480df81dafb7b6d0d45dd248e",
+      "packaged_sha256": "8ab466cc74b8e499cdf6b18fe92b1e686dacfdd480df81dafb7b6d0d45dd248e"
+    },
+    {
+      "path": "bin/_cyber_particles.py",
+      "source_sha256": "a70fd89dc80f2e5012d7eed0ba86f65f6014bc04b815d3902722637d9ac68d6c",
+      "packaged_sha256": "a70fd89dc80f2e5012d7eed0ba86f65f6014bc04b815d3902722637d9ac68d6c"
+    },
+    {
+      "path": "bin/_aether_desktop.py",
+      "source_sha256": "10f5eb73a8e28951fca7e081de24def61fc6d29282ded337d79a366eb1124135",
+      "packaged_sha256": "10f5eb73a8e28951fca7e081de24def61fc6d29282ded337d79a366eb1124135"
+    },
+    {
+      "path": "bin/_aether_tokens.json",
+      "source_sha256": "f31eec245a9891df158ddf01a07d7d64614e816a8963009afcb5de5e95c1c45d",
+      "packaged_sha256": "f31eec245a9891df158ddf01a07d7d64614e816a8963009afcb5de5e95c1c45d"
+    },
+    {
+      "path": "bin/_audiobus.py",
+      "source_sha256": "0d55a2459b20bcd47737f6a527af420d49a633d32275167aa4e8ad804e0945ce",
+      "packaged_sha256": "0d55a2459b20bcd47737f6a527af420d49a633d32275167aa4e8ad804e0945ce"
+    },
+    {
+      "path": "bin/_audioeq.py",
+      "source_sha256": "fea4f03fc89a4261030b670ae609c9716b68eb3ed50257aa0576f549ae2b3d4b",
+      "packaged_sha256": "fea4f03fc89a4261030b670ae609c9716b68eb3ed50257aa0576f549ae2b3d4b"
+    },
+    {
+      "path": "bin/_audioeq_ui.py",
+      "source_sha256": "5a72e0a4574e4f07fa1fea374b31418c369993172f4379ef7c5a617b835cd74d",
+      "packaged_sha256": "5a72e0a4574e4f07fa1fea374b31418c369993172f4379ef7c5a617b835cd74d"
+    },
+    {
+      "path": "bin/_scarlett.py",
+      "source_sha256": "3674581c77c54d310cf115e71c881dea099a92e6d1e7f2cad10c6ef0cc99ce26",
+      "packaged_sha256": "3674581c77c54d310cf115e71c881dea099a92e6d1e7f2cad10c6ef0cc99ce26"
+    }
+  ],
+  "adaptations": [
+    "Audio initial slider value blocks its write handler",
+    "Private secondary camera-radio plugin replaced by an unconfigured optional adapter"
+  ]
+}

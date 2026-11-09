@@ -1,0 +1,48 @@
+{
+  "name": "Instrument/Score Aether",
+  "version": "0.1.0",
+  "color": {
+    "canvas": "#090e18",
+    "surface": "#131c2d",
+    "raised": "#1c2940",
+    "text": "#edf4ff",
+    "secondary": "#a3b3c9",
+    "boundary": "#33445f",
+    "focus": "#bba6ff",
+    "selection": "#73e4f2",
+    "accent": "#bba6ff",
+    "success": "#78deb0",
+    "warning": "#f2c77d",
+    "danger": "#ff8f9f",
+    "control_boundary": "#667e9f"
+  },
+  "font": {
+    "heading": "JetBrainsMono Nerd Font",
+    "reading": "Noto Sans",
+    "value": "JetBrainsMono Nerd Font"
+  },
+  "motion": {
+    "ambient_animation": false,
+    "transition_ms": 120
+  },
+  "geometry": {
+    "surface_radius": 20,
+    "control_radius": 8,
+    "row_min_height": 54
+  },
+  "icon_light": {
+    "canvas": "#f2f5fa",
+    "surface": "#edf2f9",
+    "raised": "#d8e3f2",
+    "text": "#16344d",
+    "secondary": "#4b617c",
+    "selection": "#006b80",
+    "focus": "#6946a3",
+    "accent": "#6946a3",
+    "success": "#006e47",
+    "warning": "#805500",
+    "danger": "#b32445",
+    "boundary": "#64758f",
+    "control_boundary": "#64758f"
+  }
+}

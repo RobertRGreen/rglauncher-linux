@@ -1,0 +1,16 @@
+[Unit]
+Description=RGLauncher Linux bottom-edge shelf for session %i
+After=graphical-session-pre.target
+PartOf=rglauncher-session@%i.target
+
+[Service]
+Type=simple
+EnvironmentFile=%t/rglauncher-%i/session.env
+Environment=PYTHONDONTWRITEBYTECODE=1 GDK_BACKEND=wayland
+ExecCondition=@SHELF_LAUNCHER@ probe
+ExecStart=@SHELF_LAUNCHER@ run
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=rglauncher-session@%i.target

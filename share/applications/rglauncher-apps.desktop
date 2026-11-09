@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Applications
+GenericName=Applications
+Comment=Find and launch installed applications
+Exec=rglauncher apps
+TryExec=rglauncher
+Icon=aether-application
+Terminal=false
+StartupNotify=false
+Categories=Utility;
+Keywords=RGLauncher;Aether;

@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Instrument/Score Aether window overview.
+
+Stable workspace lanes share the launcher's engine. Alt+N chooses the actual
+workspace number; activation retains desktop_nav.focus and native tiled state.
+"""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+import _aether_score as cc
+from gi.repository import Gio
+
+# Manual class -> icon-name overrides, checked before the .desktop lookup.
+# Add an entry here for any window class that won't have a matching
+# .desktop file (e.g. a terminal launched with a custom --class).
+CLASS_ICON_OVERRIDES = {
+    "console": "console-cyber",  # ~/.local/share/icons/hicolor/scalable/apps/
+}
+
+
+def load_icon_index() -> dict[str, str]:
+    """Honor XDG/Flatpak precedence, including non-menu app window identities."""
+    index = {}
+    for entry in Gio.AppInfo.get_all():
+        if not isinstance(entry, cc.DesktopAppInfo):
+            continue
+        icon = cc.icon_identifier(entry.get_icon())
+        for key in (entry.get_startup_wm_class(), (entry.get_id() or "").removesuffix(".desktop"),
+                    entry.get_name(), entry.get_display_name()):
+            if key:
+                index.setdefault(key.casefold(), icon)
+    return index
+
+
+def icon_for(icon_index: dict[str, str], wm_class: str) -> str:
+    key = wm_class.casefold()
+    if key in CLASS_ICON_OVERRIDES:
+        return CLASS_ICON_OVERRIDES[key]
+    if key in icon_index:
+        return icon_index[key]
+    return wm_class.casefold()
+
+
+def load_clients() -> list[dict]:
+    try:
+        raw = subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True, check=True, timeout=1).stdout
+    except Exception:
+        return []
+    try:
+        clients = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(clients, list):
+        return []
+    clients = [c for c in clients if isinstance(c, dict)
+               and isinstance(c.get("workspace"), dict) and c.get("address")]
+    try:
+        monitors = json.loads(subprocess.run(["hyprctl", "monitors", "-j"],
+            capture_output=True, text=True, check=True, timeout=1).stdout)
+        outputs = {m["id"]: m["name"] for m in monitors}
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError):
+        outputs = {}
+    for client in clients:
+        client["_aether_output"] = outputs.get(client.get("monitor"), "")
+    return [c for c in clients if c.get("mapped", True)]
+
+
+def build_tabs(clients: list[dict], icon_index: dict[str, str]) -> list:
+    def row(c):
+        title = c.get("title") or c.get("class") or "(untitled)"
+        return (icon_for(icon_index, c.get("class", "")), title, c)
+
+    tabs = []
+    if clients:
+        tabs.append(("All", [row(c) for c in clients]))
+
+    by_ws: dict[int, list[dict]] = {}
+    for c in clients:
+        by_ws.setdefault(c["workspace"]["id"], []).append(c)
+    for ws in sorted(by_ws):
+        hotkey = ws if 1 <= ws <= 9 else None
+        tabs.append((f"Workspace {ws}", [row(c) for c in by_ws[ws]], hotkey))
+    return tabs
+
+
+def focus(addr: str, floating: bool) -> None:
+    subprocess.run(["hyprctl", "eval",
+                     f"desktop_nav.focus('address:{addr}')"],
+                    capture_output=True)
+
+
+def main():
+    icon_index = load_icon_index()
+    clients = load_clients()
+    tabs = build_tabs(clients, icon_index)
+
+    def on_activate(client: dict):
+        # The chooser is a snapshot. Never intentionally focus a vanished or
+        # obviously replaced window just because an old row was selected.
+        current = next((c for c in load_clients() if c["address"] == client["address"]
+                        and c.get("pid") == client.get("pid")
+                        and c.get("initialClass", c.get("class")) == client.get("initialClass", client.get("class"))), None)
+        if current:
+            focus(current["address"], current.get("floating", False))
+        else:
+            try:
+                subprocess.run(["notify-send", "Window unavailable", "It closed or changed while the overview was open."],
+                               capture_output=True, timeout=1)
+            except (OSError, subprocess.SubprocessError):
+                pass
+
+    cc.run("Windows", tabs, on_activate,
+           "alt+1-9 jump workspace   ctrl+tab / ctrl+shift+tab cycle   ↑/↓ select   Enter open   type to search")
+
+
+if __name__ == "__main__":
+    main()

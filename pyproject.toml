@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rglauncher-linux"
+version = "0.2.0a1"
+description = "Instrument/Score Aether desktop shell for Hyprland and Waybar"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{name = "Robert R. Green and contributors"}]
+dependencies = ["cryptography>=41"]
+
+[project.scripts]
+rglauncher = "rglauncher_linux.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rglauncher_linux*"]

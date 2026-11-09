@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Settings
+GenericName=Settings
+Comment=Configure RGLauncher appearance, shelf and updates
+Exec=rglauncher settings
+TryExec=rglauncher
+Icon=aether-settings
+Terminal=false
+StartupNotify=false
+Categories=Settings;DesktopSettings;
+Keywords=RGLauncher;Aether;

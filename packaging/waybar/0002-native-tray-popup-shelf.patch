@@ -1,0 +1,193 @@
+diff --git a/src/modules/sni/item.cpp b/src/modules/sni/item.cpp
+--- a/src/modules/sni/item.cpp
++++ b/src/modules/sni/item.cpp
+@@ -13,6 +13,7 @@
+ #include "modules/sni/icon_manager.hpp"
+ #include "util/format.hpp"
+ #include "util/gtk_icon.hpp"
++#include "util/shelf_popup.hpp"
+ 
+ template <>
+ struct fmt::formatter<Glib::VariantBase> : formatter<std::string> {
+@@ -456,6 +457,8 @@
+       g_object_weak_ref(G_OBJECT(dbus_menu), (GWeakNotify)onMenuDestroyed, this);
+       gtk_menu = Glib::wrap(GTK_MENU(dbus_menu));
+       gtk_menu->attach_to_widget(event_box);
++      // Native tray popup lifetimes are invisible to compositor layer queries.
++      waybar::util::shelf::track_menu(GTK_WIDGET(dbus_menu));
+     }
+   }
+   // Manually reset prelight to make sure the tray item doesn't stay in a hover state even though
+diff --git a/include/util/shelf_popup.hpp b/include/util/shelf_popup.hpp
+new file mode 100644
+--- /dev/null
++++ b/include/util/shelf_popup.hpp
+@@ -0,0 +1,168 @@
++// SPDX-License-Identifier: MIT
++// Copyright (c) 2026 Robert R Green and contributors
++#pragma once
++
++#include <gtk/gtk.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <unistd.h>
++
++#include <atomic>
++#include <cstddef>
++#include <cstdlib>
++#include <cstring>
++#include <string>
++#include <string_view>
++
++namespace waybar::util::shelf {
++
++// This optional bridge never executes commands, waits for a reply or opens a
++// display. Messages are bounded; a full/missing controller is a best-effort
++// miss.
++inline std::string quote(std::string_view value) {
++  constexpr char hex[] = "0123456789abcdef";
++  std::string result = "\"";
++  for (unsigned char byte : value) {
++    if (byte == '"' || byte == '\\') {
++      result += '\\';
++      result += static_cast<char>(byte);
++    } else if (byte < 0x20) {
++      result += "\\u00";
++      result += hex[byte >> 4];
++      result += hex[byte & 15];
++    } else {
++      result += static_cast<char>(byte);
++    }
++  }
++  return result + '"';
++}
++
++inline std::string message(bool opened, std::string_view output,
++                           std::string_view id) {
++  if (output.empty() || output.size() > 128 || id.empty() || id.size() > 64)
++    return {};
++  if (!g_utf8_validate(output.data(), output.size(), nullptr) ||
++      !g_utf8_validate(id.data(), id.size(), nullptr))
++    return {};
++  return std::string("{\"command\":\"popup-") + (opened ? "open" : "close") +
++         "\",\"output\":" + quote(output) + ",\"menu\":" + quote(id) + "}\n";
++}
++
++inline bool notify(bool opened, std::string_view id) {
++  const char *path = std::getenv("RGL_SHELF_SOCKET");
++  const char *output = std::getenv("RGL_SHELF_OUTPUT");
++  if (!path || !output)
++    return false;
++  sockaddr_un address{};
++  address.sun_family = AF_UNIX;
++  const auto length = strnlen(path, sizeof(address.sun_path));
++  const auto output_length = strnlen(output, 129);
++  if (!length || length >= sizeof(address.sun_path) || output_length > 128)
++    return false;
++  auto payload = message(opened, std::string_view(output, output_length), id);
++  if (payload.empty() || payload.size() > 1536)
++    return false;
++  std::memcpy(address.sun_path, path, length + 1);
++  const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
++  if (fd < 0)
++    return false;
++  bool sent = false;
++  if (connect(fd, reinterpret_cast<sockaddr *>(&address),
++              offsetof(sockaddr_un, sun_path) + length + 1) == 0) {
++    sent =
++        send(fd, payload.data(), payload.size(), MSG_NOSIGNAL | MSG_DONTWAIT) ==
++        static_cast<ssize_t>(payload.size());
++  }
++  close(fd);
++  return sent;
++}
++
++inline void track_menu(GtkWidget *menu);
++
++inline void track_item(GtkWidget *item) {
++  if (!GTK_IS_MENU_ITEM(item))
++    return;
++  if (!g_object_get_data(G_OBJECT(item), "rgl-shelf-submenu-watch")) {
++    g_object_set_data(G_OBJECT(item), "rgl-shelf-submenu-watch",
++                      GINT_TO_POINTER(1));
++    g_signal_connect(item, "notify::submenu",
++                     G_CALLBACK(+[](GObject *object, GParamSpec *, gpointer) {
++                       track_menu(
++                           gtk_menu_item_get_submenu(GTK_MENU_ITEM(object)));
++                     }),
++                     nullptr);
++  }
++  track_menu(gtk_menu_item_get_submenu(GTK_MENU_ITEM(item)));
++}
++
++struct MenuState {
++  std::string id;
++  bool opened = false;
++  bool destroyed = false;
++
++  MenuState() {
++    static std::atomic<unsigned long long> serial{0};
++    id = std::to_string(getpid()) + "-" + std::to_string(++serial);
++  }
++  void set(bool mapped) {
++    if (destroyed || mapped == opened)
++      return;
++    opened = mapped;
++    notify(mapped, id);
++  }
++  ~MenuState() {
++    if (opened)
++      notify(false, id);
++  }
++};
++
++inline void discover(GtkWidget *menu) {
++  GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
++  for (GList *child = children; child; child = child->next)
++    track_item(GTK_WIDGET(child->data));
++  g_list_free(children);
++}
++
++inline void track_menu(GtkWidget *menu) {
++  if (!menu || !GTK_IS_MENU(menu) || !std::getenv("RGL_SHELF_SOCKET") ||
++      !std::getenv("RGL_SHELF_OUTPUT"))
++    return;
++  if (g_object_get_data(G_OBJECT(menu), "rgl-shelf-menu-state"))
++    return;
++  auto *state = new MenuState;
++  g_object_set_data_full(
++      G_OBJECT(menu), "rgl-shelf-menu-state", state,
++      +[](gpointer value) { delete static_cast<MenuState *>(value); });
++  g_signal_connect(menu, "map",
++                   G_CALLBACK(+[](GtkWidget *widget, gpointer data) {
++                     static_cast<MenuState *>(data)->set(true);
++                     discover(widget);
++                   }),
++                   state);
++  g_signal_connect(menu, "unmap", G_CALLBACK(+[](GtkWidget *, gpointer data) {
++                     static_cast<MenuState *>(data)->set(false);
++                   }),
++                   state);
++  g_signal_connect(menu, "destroy", G_CALLBACK(+[](GtkWidget *, gpointer data) {
++                     auto *tracked = static_cast<MenuState *>(data);
++                     tracked->set(false);
++                     tracked->destroyed = true;
++                   }),
++                   state);
++  g_signal_connect(menu, "add",
++                   G_CALLBACK(+[](GtkContainer *, GtkWidget *child, gpointer) {
++                     track_item(child);
++                   }),
++                   nullptr);
++  // GtkMenuShell::insert is used by append/prepend; GtkContainer::add alone
++  // misses dynamically populated dbusmenu children.
++  g_signal_connect_after(menu, "insert",
++                         G_CALLBACK(+[](GtkMenuShell *, GtkWidget *child, gint,
++                                        gpointer) { track_item(child); }),
++                         nullptr);
++  discover(menu);
++  if (gtk_widget_get_mapped(menu))
++    state->set(true);
++}
++
++} // namespace waybar::util::shelf

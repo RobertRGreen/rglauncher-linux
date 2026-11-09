@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Network
+GenericName=Network
+Comment=Manage wireless connections
+Exec=rglauncher wifi
+TryExec=rglauncher
+Icon=aether-network
+Terminal=false
+StartupNotify=false
+Categories=Settings;
+Keywords=RGLauncher;Aether;

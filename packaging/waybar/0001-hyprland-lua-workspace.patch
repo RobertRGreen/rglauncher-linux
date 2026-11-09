@@ -1,0 +1,36 @@
+diff --git a/src/modules/hyprland/workspace.cpp b/src/modules/hyprland/workspace.cpp
+index 4cdd891..a7fd103 100644
+--- a/src/modules/hyprland/workspace.cpp
++++ b/src/modules/hyprland/workspace.cpp
+@@ -2,6 +2,7 @@
+ #include <spdlog/spdlog.h>
+ 
+ #include <memory>
++#include <cstdlib>
+ #include <string>
+ #include <utility>
+ 
+@@ -69,6 +70,23 @@ std::optional<WindowRepr> Workspace::closeWindow(WindowAddress const& addr) {
+ bool Workspace::handleClicked(GdkEventButton* bt) const {
+   if (bt->type == GDK_BUTTON_PRESS) {
+     try {
++      // Hyprland's Lua configuration mode expects a dispatcher expression.
++      // Opt in locally so the packaged legacy behavior remains available.
++      if (std::getenv("WAYBAR_HYPRLAND_LUA") && !isSpecial() &&
++          !m_workspaceManager.moveToMonitor()) {
++        const std::string selector = id() > 0 ? std::to_string(id()) : "name:" + name();
++        std::string literal = "\"";
++        for (unsigned char c : selector) {
++          literal += "\\" + std::to_string(1000 + c).substr(1);
++        }
++        literal += "\"";
++        const auto reply = m_ipc.getSocket1Reply(
++            "dispatch hl.dsp.focus({workspace=" + literal + "})");
++        if (reply.find("error:") != std::string::npos) {
++          spdlog::error("Failed to focus workspace: {}", reply);
++        }
++        return true;
++      }
+       if (id() > 0) {  // normal
+         if (m_workspaceManager.moveToMonitor()) {
+           m_ipc.getSocket1Reply("dispatch focusworkspaceoncurrentmonitor " + std::to_string(id()));

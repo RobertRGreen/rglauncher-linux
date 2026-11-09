@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Calculator
+GenericName=Calculator
+Comment=Calculate and copy results
+Exec=rglauncher calc
+TryExec=rglauncher
+Icon=aether-calculator
+Terminal=false
+StartupNotify=false
+Categories=Utility;Calculator;
+Keywords=RGLauncher;Aether;

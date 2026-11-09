@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Audio Console
+GenericName=Audio Console
+Comment=Route audio, adjust levels and inspect the audio system
+Exec=rglauncher audio
+TryExec=rglauncher
+Icon=aether-audio-console
+Terminal=false
+StartupNotify=false
+Categories=AudioVideo;Audio;Mixer;
+Keywords=RGLauncher;Aether;

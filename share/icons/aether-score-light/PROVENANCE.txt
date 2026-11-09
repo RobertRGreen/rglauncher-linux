@@ -1,0 +1,3 @@
+Original RGLauncher / Instrument-Score Aether SVG paths.
+MIT License; see distribution LICENSE and icon source provenance.
+Application brand logos are not replaced by this family.

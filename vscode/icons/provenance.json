@@ -1,0 +1,264 @@
+{
+  "family": "Instrument/Score Aether",
+  "version": "0.1.0",
+  "license": "MIT",
+  "provenance": "Original project-authored paths; no upstream paths or app logos imported.",
+  "assets": [
+    {
+      "icon": "aether-document",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document.svg",
+      "sha256": "d4121ee1d21eb140abd4b9f43ce9a824dac2f13927fbe9c25893c5d618be2291",
+      "destination": "dark/file.svg"
+    },
+    {
+      "icon": "aether-document-text",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-text.svg",
+      "sha256": "14c9fcf777e7ce492ea61b21e9371aa896374a7541ab55b4d006ee48dd670110",
+      "destination": "dark/text.svg"
+    },
+    {
+      "icon": "aether-document-code",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-code.svg",
+      "sha256": "c35760dc42b888b4dc4cffaf322fc39e287a8325e9da2843afd4167f17cb7489",
+      "destination": "dark/code.svg"
+    },
+    {
+      "icon": "aether-document-audio",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-audio.svg",
+      "sha256": "9b5e7a45a5c387631dcb0d0c1c3161c28d5d8e0912ec8890bf188b02c864b1b6",
+      "destination": "dark/audio.svg"
+    },
+    {
+      "icon": "aether-document-image",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-image.svg",
+      "sha256": "1173dfda1a35f09f4fa3912006891c9b0d778da58e9de5d3c835d9d1ffe03db6",
+      "destination": "dark/image.svg"
+    },
+    {
+      "icon": "aether-document-video",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-video.svg",
+      "sha256": "272ad789ac015bb099d57501b11d1b49a1d29eb6c700a0ba008f38ac34d6c7c9",
+      "destination": "dark/video.svg"
+    },
+    {
+      "icon": "aether-document-table",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-document-table.svg",
+      "sha256": "9558187e4845db20add05c741364e5ad36609d486b6829c5a8e8cc405c52975d",
+      "destination": "dark/table.svg"
+    },
+    {
+      "icon": "aether-package",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-package.svg",
+      "sha256": "8f7827bfc2aeef447e0ed35819bd7cd2e5b037ef52c57a0d4340340e96798e8f",
+      "destination": "dark/package.svg"
+    },
+    {
+      "icon": "aether-archive",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/mimetypes/aether-archive.svg",
+      "sha256": "56a4a6c72235230655e52399f06c4a70cad7788c649a187dcb6a3399bf038f67",
+      "destination": "dark/archive.svg"
+    },
+    {
+      "icon": "aether-settings",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/actions/aether-settings.svg",
+      "sha256": "29003804939e53f475ff02c3e243bdceb5d22b08b02234cb518601fed482cb54",
+      "destination": "dark/settings.svg"
+    },
+    {
+      "icon": "aether-folder",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder.svg",
+      "sha256": "37a8d9445908397eea00ee4307964cfbc189ff94cc3654401083fb548680ec16",
+      "destination": "dark/folder.svg"
+    },
+    {
+      "icon": "aether-folder-open",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder-open.svg",
+      "sha256": "9e5a1cf7bd2e8691516c6e36c9bd777dd6d83bdbf4b48bda9fa18c2ae82ca7a9",
+      "destination": "dark/folder_open.svg"
+    },
+    {
+      "icon": "aether-folder-music",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder-music.svg",
+      "sha256": "6356a4301f47faddb23cd4a01c317cf43916a4b3eb8665bb02eb7f09a7b93c91",
+      "destination": "dark/folder_music.svg"
+    },
+    {
+      "icon": "aether-folder-documents",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder-documents.svg",
+      "sha256": "f6080c8238c659ca7a9ab1367914e19302fb3a7658cb3479c34f20eb9bca1a1f",
+      "destination": "dark/folder_docs.svg"
+    },
+    {
+      "icon": "aether-folder-pictures",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder-pictures.svg",
+      "sha256": "aa1d917324945165979245885ceebd6bb86a83297eaad3bd13927be9f1f8d153",
+      "destination": "dark/folder_images.svg"
+    },
+    {
+      "icon": "aether-folder-projects",
+      "variant": "dark",
+      "optical_size": 16,
+      "source": "color-dark/16/places/aether-folder-projects.svg",
+      "sha256": "654a007a4c4b7d08a431a0054b0e4576cb92e1a00dc7ac170c2122209f898cc1",
+      "destination": "dark/folder_projects.svg"
+    },
+    {
+      "icon": "aether-document",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document.svg",
+      "sha256": "3458b9c6273bff48b0e15ff4d37235b66199186302be5b6f57656161162d7cb6",
+      "destination": "light/file.svg"
+    },
+    {
+      "icon": "aether-document-text",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-text.svg",
+      "sha256": "6097869a58cd5d033c72f009bbf5729dde7d76ae2bf983e3b5ea323b138e9722",
+      "destination": "light/text.svg"
+    },
+    {
+      "icon": "aether-document-code",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-code.svg",
+      "sha256": "e29319b23477cdad61ea69dc95aac96417deb735a0c6c0dbdf69a79ab983f274",
+      "destination": "light/code.svg"
+    },
+    {
+      "icon": "aether-document-audio",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-audio.svg",
+      "sha256": "9287b086cca42e17fbcb186a4232f942b2e82106c481cce9744cde07723a064b",
+      "destination": "light/audio.svg"
+    },
+    {
+      "icon": "aether-document-image",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-image.svg",
+      "sha256": "32e7fff0b962f236fff3716877f08bff6c01049f182dab7021596ab2b7019f04",
+      "destination": "light/image.svg"
+    },
+    {
+      "icon": "aether-document-video",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-video.svg",
+      "sha256": "7bdae140766551ad36bc2759400352f2fb0f7b7ac8ccbd9f1712d915b4dbe8d0",
+      "destination": "light/video.svg"
+    },
+    {
+      "icon": "aether-document-table",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-document-table.svg",
+      "sha256": "3ca599697c2f80b378ac9bc04ffd497b5f7d71a020e574840ddf8de144d50769",
+      "destination": "light/table.svg"
+    },
+    {
+      "icon": "aether-package",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-package.svg",
+      "sha256": "66f7f20dfb96a6fad5d94df2d6247d0d1189a18b84ea4e3e4b5cdd25a49d81d3",
+      "destination": "light/package.svg"
+    },
+    {
+      "icon": "aether-archive",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/mimetypes/aether-archive.svg",
+      "sha256": "28e2c1bfe256c2cfc25cca1c5bef6599635f16800444b69f4fb080ae038ba9e6",
+      "destination": "light/archive.svg"
+    },
+    {
+      "icon": "aether-settings",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/actions/aether-settings.svg",
+      "sha256": "f4b1340b4754312e2b1b35843d7a1e5fb2b812d08c92d97cf5a4f9827f87e03f",
+      "destination": "light/settings.svg"
+    },
+    {
+      "icon": "aether-folder",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder.svg",
+      "sha256": "3206c85a63eef79a006de0ee2bda31b04b9800aff7d89a0c73a116920923e108",
+      "destination": "light/folder.svg"
+    },
+    {
+      "icon": "aether-folder-open",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder-open.svg",
+      "sha256": "5faec9605b2b2934a53b9835e9040b8de5d0374a98aa7a6ed4e97bcf1dc7365a",
+      "destination": "light/folder_open.svg"
+    },
+    {
+      "icon": "aether-folder-music",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder-music.svg",
+      "sha256": "6007d8d513d9ca88bffb25086e9d4ec7876808c2da53e4ca67140d50b0154bcb",
+      "destination": "light/folder_music.svg"
+    },
+    {
+      "icon": "aether-folder-documents",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder-documents.svg",
+      "sha256": "6c50314661658fdf7253bda13debd199bfbbf1791ddc7a947abaf7146cc8183a",
+      "destination": "light/folder_docs.svg"
+    },
+    {
+      "icon": "aether-folder-pictures",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder-pictures.svg",
+      "sha256": "a9ebe656f42863b50435971699c86996d951b816ae2061f5d30a9d649ee94c0d",
+      "destination": "light/folder_images.svg"
+    },
+    {
+      "icon": "aether-folder-projects",
+      "variant": "light",
+      "optical_size": 16,
+      "source": "color-light/16/places/aether-folder-projects.svg",
+      "sha256": "b4c4d03f15f3d2281d40c9304332c2b0a39385b7416ba79be3b500d9b9fe5b14",
+      "destination": "light/folder_projects.svg"
+    }
+  ]
+}

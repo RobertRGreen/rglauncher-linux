@@ -1,0 +1,873 @@
+#!/usr/bin/env python3
+"""Cyberpunk bluetooth popout menu (waybar bluetooth module on-click).
+
+Talks straight to bluez over D-Bus (org.bluez) -- same approach as
+wifi-menu talks to iwd, just a different backend. Devices, pairing,
+connect/disconnect/forget and adapter power are all real D-Bus calls;
+nothing shells out to bluetoothctl.
+
+Pairing confirmation is handled by registering ourselves as an
+org.bluez.Agent1 (capability "KeyboardDisplay"). bluez calls back into
+BtAgent while our Pair() call is in flight; RequestConfirmation /
+RequestAuthorization / AuthorizeService auto-accept ("just works" /
+numeric-comparison flow -- the overwhelmingly common case for phones,
+headphones, and other modern peripherals), while RequestPinCode /
+RequestPasskey pop a modal GTK entry dialog for the rare device that
+needs a code typed in. Pair() runs on a background thread for the same
+reason wifi-menu's Connect() does: the callback needs the main thread's
+GLib loop free to dispatch it.
+
+Only one popout at a time: an flock on $XDG_RUNTIME_DIR/bt-menu.lock
+makes a second click while one is open a no-op instead of stacking
+windows.
+"""
+
+import fcntl
+import os
+import sys
+import threading
+from pathlib import Path
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib, GtkLayerShell, Pango
+
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
+import dbus
+import dbus.service
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _cyber_particles import install_particles
+from _cyber_theme import (
+    rgba, scanline_background, chromatic_shadow,
+    BG, BG_CARD, BG_HOT, FG, ACCENT, ACCENT2, PURPLE, MUTED, LINE,
+    FONT_HEAD, FONT_BODY, PULSE_TIMING, pulse_keyframes, blink_keyframes,
+)
+
+BLUEZ = "org.bluez"
+AGENT_PATH = "/org/bluez/agent/bt_menu"
+AGENT_IFACE = "org.bluez.Agent1"
+AGENT_CAPABILITY = "KeyboardDisplay"
+
+SCAN_SECONDS = 8
+
+CARD_W = 480
+ROW_H = 58
+
+CSS = f"""
+window.bt-root {{ background-color: transparent; }}
+
+{pulse_keyframes("bt")}
+{blink_keyframes("bt")}
+
+box.bt-card {{
+    background-color: {BG};
+    background-image:
+        {scanline_background()},
+        linear-gradient(to bottom, {BG_CARD}, {BG});
+    border: 2.5px solid {PURPLE};
+    border-radius: 18px;
+    padding: 20px 24px;
+    animation: bt-pulse 5s {PULSE_TIMING} infinite;
+}}
+
+label.bt-title {{
+    color: {PURPLE};
+    font-family: "{FONT_HEAD}";
+    font-weight: bold;
+    font-size: 19px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px {rgba(PURPLE, 0.85)}, 0 0 18px {rgba(PURPLE, 0.45)};
+}}
+label.bt-cursor {{
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    font-size: 19px;
+    text-shadow: 0 0 8px {rgba(ACCENT2, 0.85)};
+    animation: bt-blink 1.1s steps(2, end) infinite;
+}}
+label.bt-standard {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 11px;
+    letter-spacing: 1px;
+    border: 1px solid {LINE};
+    border-radius: 6px;
+    padding: 2px 6px;
+}}
+label.bt-status {{
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px {rgba(ACCENT2, 0.5)};
+}}
+label.bt-status.offline {{
+    color: {MUTED};
+    text-shadow: none;
+}}
+button.bt-iconbtn, button.bt-iconbtn:hover, button.bt-iconbtn:active {{
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid {LINE};
+    border-radius: 8px;
+    color: {ACCENT2};
+    font-family: "{FONT_BODY}";
+    padding: 2px 8px;
+    box-shadow: none;
+    text-shadow: none;
+}}
+button.bt-iconbtn:hover {{
+    border-color: {ACCENT2};
+    box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.35)};
+}}
+button.bt-iconbtn.active {{
+    color: {FG};
+    border-color: {FG};
+    box-shadow: 0 0 10px 1px {rgba(FG, 0.35)};
+}}
+
+eventbox.bt-row {{
+    background-color: {BG_CARD};
+}}
+box.bt-row-inner {{
+    border: 1.5px solid {LINE};
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: {BG_CARD};
+    transition: all 120ms ease-out;
+}}
+box.bt-row-inner.hover {{
+    border-color: {ACCENT2};
+    box-shadow: 0 0 16px 2px {rgba(ACCENT2, 0.40)};
+}}
+box.bt-row-inner.connected {{
+    border-color: {FG};
+    background-color: {BG_HOT};
+    box-shadow: 0 0 18px 3px {rgba(FG, 0.35)};
+}}
+label.bt-name {{
+    color: {FG};
+    font-family: "{FONT_BODY}";
+    font-size: 16px;
+}}
+box.bt-row-inner.connected label.bt-name {{
+    color: {FG};
+    font-weight: bold;
+    text-shadow: 0 0 6px {rgba(FG, 0.6)};
+}}
+label.bt-meta {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 12px;
+}}
+label.bt-signal {{
+    font-family: "{FONT_BODY}";
+    font-size: 16px;
+}}
+label.bt-signal.strong {{
+    color: {FG};
+    text-shadow: 0 0 6px {rgba(FG, 0.6)};
+}}
+label.bt-signal.mid {{
+    color: {ACCENT2};
+    text-shadow: 0 0 6px {rgba(ACCENT2, 0.5)};
+}}
+label.bt-signal.weak {{
+    color: {ACCENT};
+    text-shadow: 0 0 6px {rgba(ACCENT, 0.5)};
+}}
+label.bt-empty {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 13px;
+    padding: 24px;
+}}
+
+dialog.bt-pass, window.bt-pass {{
+    background-color: {BG};
+}}
+label.bt-pass-label {{
+    color: {ACCENT};
+    font-family: "{FONT_BODY}";
+    font-weight: bold;
+    font-size: 13px;
+}}
+entry.bt-pass-entry {{
+    background-color: {BG_CARD};
+    color: {FG};
+    border: 2px solid {PURPLE};
+    border-radius: 8px;
+    font-family: "{FONT_BODY}";
+    padding: 6px 10px;
+}}
+button.bt-pass-btn, button.bt-pass-btn:hover, button.bt-pass-btn:active {{
+    background-image: none;
+    font-family: "{FONT_BODY}";
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 6px 16px;
+    box-shadow: none;
+    text-shadow: none;
+}}
+button.bt-connect-btn {{
+    color: {FG};
+    border: 1px solid {FG};
+    background-color: {rgba(FG, 0.08)};
+}}
+button.bt-connect-btn:hover {{
+    box-shadow: 0 0 10px 1px {rgba(FG, 0.35)};
+}}
+button.bt-cancel-btn {{
+    color: {MUTED};
+    border: 1px solid {LINE};
+    background-color: transparent;
+}}
+
+label.bt-title, button.bt-pill.active, button.bt-pill.on,
+button.bt-iconbtn.active, box.bt-row-inner.connected label {{
+    {chromatic_shadow()}
+}}
+"""
+
+
+def signal_bars(rssi) -> tuple[str, str]:
+    """rssi is bluez's RSSI property in dBm (negative), or None -- bluez
+    only keeps RSSI populated for devices seen during an active scan, so
+    paired-but-idle devices usually have none. Returns (bar glyph, CSS
+    tier class: strong/mid/weak)."""
+    if rssi is None:
+        return "----", "weak"
+    dbm = int(rssi)
+    if dbm >= -50:
+        return "████", "strong"
+    if dbm >= -60:
+        return "███_", "strong"
+    if dbm >= -70:
+        return "██__", "mid"
+    if dbm >= -80:
+        return "█___", "weak"
+    return "____", "weak"
+
+
+class Canceled(dbus.DBusException):
+    _dbus_error_name = "org.bluez.Error.Canceled"
+
+
+class BtAgent(dbus.service.Object):
+    def __init__(self, bus, request_pincode_cb, request_passkey_cb, cancel_cb):
+        super().__init__(bus, AGENT_PATH)
+        self._request_pincode_cb = request_pincode_cb
+        self._request_passkey_cb = request_passkey_cb
+        self._cancel_cb = cancel_cb
+
+    @dbus.service.method(AGENT_IFACE, in_signature="", out_signature="")
+    def Release(self):
+        pass
+
+    @dbus.service.method(AGENT_IFACE, in_signature="o", out_signature="s")
+    def RequestPinCode(self, device_path):
+        result = self._request_pincode_cb(str(device_path))
+        if not result:
+            raise Canceled("cancelled by user")
+        return result
+
+    @dbus.service.method(AGENT_IFACE, in_signature="ou", out_signature="")
+    def DisplayPinCode(self, device_path, pincode):
+        pass
+
+    @dbus.service.method(AGENT_IFACE, in_signature="o", out_signature="u")
+    def RequestPasskey(self, device_path):
+        result = self._request_passkey_cb(str(device_path))
+        if result is None:
+            raise Canceled("cancelled by user")
+        return dbus.UInt32(int(result))
+
+    @dbus.service.method(AGENT_IFACE, in_signature="ouq", out_signature="")
+    def DisplayPasskey(self, device_path, passkey, entered):
+        pass
+
+    @dbus.service.method(AGENT_IFACE, in_signature="ou", out_signature="")
+    def RequestConfirmation(self, device_path, passkey):
+        # "just works" / numeric-comparison flow -- auto-accept, no
+        # interactive display needed for the overwhelming common case.
+        return
+
+    @dbus.service.method(AGENT_IFACE, in_signature="o", out_signature="")
+    def RequestAuthorization(self, device_path):
+        return
+
+    @dbus.service.method(AGENT_IFACE, in_signature="os", out_signature="")
+    def AuthorizeService(self, device_path, uuid):
+        return
+
+    @dbus.service.method(AGENT_IFACE, in_signature="s", out_signature="")
+    def Cancel(self, reason):
+        self._cancel_cb(str(reason))
+
+
+class BtMenu(Gtk.Window):
+    def __init__(self):
+        super().__init__()
+        self.bus = dbus.SystemBus()
+        self.adapter_path = None
+        self.adapter_iface = None
+        self.adapter_props = None
+        self._active_dialog = None
+        self._selected = set()
+        self._pending = {}
+        self._errors = {}
+        self._rows = {}
+        self._render_fingerprint = None
+        self._closed = False
+        self._scanning = False
+        self._scan_tick_id = None
+        self.agent = BtAgent(self.bus, self._prompt_pincode, self._prompt_passkey,
+                              self._agent_cancel)
+
+        self._build_ui()
+        self._connect_bluez()
+        self.refresh()
+        self._poll_id = GLib.timeout_add(1500, self._poll)
+
+    def _poll(self):
+        if self._closed:
+            return False
+        if self._active_dialog is None:
+            self.refresh()
+        return True
+
+    # -- bluez plumbing ------------------------------------------------------
+
+    def _connect_bluez(self):
+        try:
+            om = dbus.Interface(self.bus.get_object(BLUEZ, "/"),
+                                 "org.freedesktop.DBus.ObjectManager")
+            objects = om.GetManagedObjects()
+            for path, ifaces in objects.items():
+                if "org.bluez.Adapter1" in ifaces:
+                    self.adapter_path = str(path)
+                    break
+            if self.adapter_path is None:
+                self._set_status("no bluetooth adapter found", offline=True)
+                return
+            self.adapter_iface = dbus.Interface(
+                self.bus.get_object(BLUEZ, self.adapter_path), "org.bluez.Adapter1")
+            self.adapter_props = dbus.Interface(
+                self.bus.get_object(BLUEZ, self.adapter_path), dbus.PROPERTIES_IFACE)
+            agent_mgr = dbus.Interface(
+                self.bus.get_object(BLUEZ, "/org/bluez"), "org.bluez.AgentManager1")
+            agent_mgr.RegisterAgent(AGENT_PATH, AGENT_CAPABILITY)
+            agent_mgr.RequestDefaultAgent(AGENT_PATH)
+        except dbus.DBusException as e:
+            self._set_status(f"bluez unavailable: {e.get_dbus_message()}", offline=True)
+
+    def _unregister_agent(self):
+        try:
+            agent_mgr = dbus.Interface(
+                self.bus.get_object(BLUEZ, "/org/bluez"), "org.bluez.AgentManager1")
+            agent_mgr.UnregisterAgent(AGENT_PATH)
+        except dbus.DBusException:
+            pass
+
+    def _props_for(self, path, iface):
+        p = dbus.Interface(self.bus.get_object(BLUEZ, path), dbus.PROPERTIES_IFACE)
+        return dict(p.GetAll(iface))
+
+    def _powered(self) -> bool:
+        if self.adapter_props is None:
+            return False
+        try:
+            return bool(self.adapter_props.Get("org.bluez.Adapter1", "Powered"))
+        except dbus.DBusException:
+            return False
+
+    def refresh(self):
+        if self.adapter_iface is None:
+            return
+        self._load_and_render()
+        ctx = self.power_btn.get_style_context()
+        if self._powered():
+            ctx.add_class("active")
+        else:
+            ctx.remove_class("active")
+
+    def _load_and_render(self):
+        if not self._powered():
+            self._rows = {}
+            self._render_fingerprint = None
+            self.connect_selected_btn.set_sensitive(False)
+            self._populate([])
+            self._set_status("bluetooth off", offline=True)
+            return
+        try:
+            om = dbus.Interface(self.bus.get_object(BLUEZ, "/"),
+                                 "org.freedesktop.DBus.ObjectManager")
+            objects = om.GetManagedObjects()
+        except dbus.DBusException:
+            objects = {}
+        rows = []
+        connected_names = []
+        for path, ifaces in objects.items():
+            dev = ifaces.get("org.bluez.Device1")
+            if dev is None:
+                continue
+            path = str(path)
+            if self.adapter_path and not path.startswith(self.adapter_path + "/"):
+                continue
+            name = str(dev.get("Alias", dev.get("Name", ""))).strip()
+            connected = bool(dev.get("Connected", False))
+            paired = bool(dev.get("Paired", False)) or bool(dev.get("Bonded", False))
+            rssi = dev.get("RSSI")
+            rows.append({
+                "path": path,
+                "name": name or path.rsplit("/", 1)[-1],
+                "connected": connected,
+                "paired": paired,
+                "rssi": int(rssi) if rssi is not None else None,
+            })
+            if connected:
+                connected_names.append(name)
+        # connected first, then paired, then everything else by signal
+        rows.sort(key=lambda r: (
+            not r["connected"], not r["paired"],
+            -(r["rssi"] if r["rssi"] is not None else -999), r["name"].lower()))
+        self._rows = {row['path']: row for row in rows}
+        fingerprint = repr((rows, sorted(self._selected), self._pending, self._errors))
+        if fingerprint != self._render_fingerprint:
+            self._render_fingerprint = fingerprint
+            self._populate(rows)
+        self.connect_selected_btn.set_sensitive(bool(self._selected) and not self._pending)
+        if connected_names:
+            self._set_status(f"{len(connected_names)} connected · {', '.join(connected_names)}")
+        elif self._scanning:
+            self._set_status("scanning…")
+        else:
+            self._set_status("not connected")
+
+    # -- UI construction ----------------------------------------------------
+
+    def _build_ui(self):
+        self.get_style_context().add_class("bt-root")
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_namespace(self, "bt-menu")
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        # full backdrop so an outside click can close the menu -- see
+        # wifi-menu for why a corner-anchored surface can't do this.
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.RIGHT,
+                     GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT):
+            GtkLayerShell.set_anchor(self, edge, True)
+
+        self.set_app_paintable(True)
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        backdrop = Gtk.EventBox()
+        backdrop.connect("button-press-event", lambda w, e: self.close_menu())
+        self.add(backdrop)
+
+        card_swallow = Gtk.EventBox()
+        card_swallow.connect("button-press-event", lambda w, e: True)
+        backdrop.add(card_swallow)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        card.get_style_context().add_class("bt-card")
+        card.set_size_request(CARD_W, -1)
+        card.set_halign(Gtk.Align.END)
+        card.set_valign(Gtk.Align.START)
+        card.set_margin_top(44)
+        card.set_margin_end(10)
+        card_swallow.add(card)
+
+        header = Gtk.Box(spacing=8)
+        title = Gtk.Label(label="BLUETOOTH DEVICES", xalign=0)
+        title.get_style_context().add_class("bt-title")
+        header.pack_start(title, False, False, 0)
+        standard = Gtk.Label(label="802.15.1 · WPAN", xalign=0)
+        standard.get_style_context().add_class("bt-standard")
+        header.pack_start(standard, False, False, 0)
+        cursor = Gtk.Label(label="_", xalign=0)
+        cursor.get_style_context().add_class("bt-cursor")
+        header.pack_start(cursor, True, True, 0)
+        self.power_btn = Gtk.Button(label="⏻")
+        self.power_btn.get_style_context().add_class("bt-iconbtn")
+        self.power_btn.connect("clicked", lambda *_: self._toggle_power())
+        header.pack_start(self.power_btn, False, False, 0)
+        self.scan_btn = Gtk.Button(label="↻")
+        self.scan_btn.get_style_context().add_class("bt-iconbtn")
+        self.scan_btn.connect("clicked", lambda *_: self._start_scan())
+        header.pack_start(self.scan_btn, False, False, 0)
+        card.pack_start(header, False, False, 0)
+
+        self.status_label = Gtk.Label(label="> loading…", xalign=0)
+        self.status_label.set_line_wrap(True)
+        self.status_label.set_max_width_chars(48)
+        self.status_label.get_style_context().add_class("bt-status")
+        status_row = Gtk.Box(spacing=8)
+        status_row.pack_start(self.status_label, False, False, 0)
+        status_cursor = Gtk.Label(label="_")
+        status_cursor.get_style_context().add_class("bt-cursor")
+        status_row.pack_start(status_cursor, False, False, 0)
+        card.pack_start(status_row, False, False, 0)
+
+        self.connect_selected_btn = Gtk.Button(label="Connect selected")
+        self.connect_selected_btn.get_style_context().add_class("bt-iconbtn")
+        self.connect_selected_btn.connect("clicked", lambda *_: self._connect_selected())
+        card.pack_start(self.connect_selected_btn, False, False, 0)
+
+        sep = Gtk.Separator()
+        card.pack_start(sep, False, False, 2)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        # set_max_content_height() + set_propagate_natural_height() alone
+        # doesn't reliably re-negotiate this scroller's height once rows
+        # are added after the first layout pass -- confirmed live (audio-menu
+        # build, 2026-09-15: instrumented with get_allocated_height(), stuck
+        # at ~150-380px regardless of the max given). A plain size request
+        # has no such ambiguity, so this now claims real, fixed real-estate
+        # instead of hoping natural-height propagation cooperates.
+        scroller.set_size_request(-1, 560)
+        self.rows_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        scroller.add(self.rows_box)
+        card.pack_start(scroller, True, True, 0)
+
+        hint = Gtk.Label(
+            label="Select paired devices to connect together. Each connection is independent. Right-click to forget.",
+            xalign=0)
+        hint.set_line_wrap(True)
+        hint.get_style_context().add_class("bt-meta")
+        card.pack_start(hint, False, False, 0)
+
+        self.particle_layer = install_particles(card)
+
+        self.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.connect("key-press-event", self._on_key)
+        self.connect("destroy", lambda w: Gtk.main_quit())
+
+        self.show_all()
+
+    def _set_status(self, text, offline=False):
+        self.status_label.set_text("> " + text)
+        ctx = self.status_label.get_style_context()
+        if offline:
+            ctx.add_class("offline")
+        else:
+            ctx.remove_class("offline")
+
+    def _populate(self, rows):
+        for child in list(self.rows_box.get_children()):
+            self.rows_box.remove(child)
+        if not rows:
+            msg = "bluetooth is off" if not self._powered() else "no devices found — try scan"
+            empty = Gtk.Label(label=msg, xalign=0.5)
+            empty.get_style_context().add_class("bt-empty")
+            self.rows_box.pack_start(empty, False, False, 0)
+            self.rows_box.show_all()
+            return
+        for dev in rows:
+            self.rows_box.pack_start(self._build_row(dev), False, False, 0)
+        self.rows_box.show_all()
+
+    def _build_row(self, dev):
+        inner = Gtk.Box(spacing=8)
+        inner.get_style_context().add_class("bt-row-inner")
+        if dev["connected"]:
+            inner.get_style_context().add_class("connected")
+        inner.set_size_request(-1, ROW_H)
+
+        bars, tier = signal_bars(dev["rssi"])
+        sig = Gtk.Label(label=bars)
+        sig.get_style_context().add_class("bt-signal")
+        sig.get_style_context().add_class(tier)
+        sig.set_tooltip_text("Signal not reported" if dev["rssi"] is None else f'RSSI {dev["rssi"]} dBm')
+        inner.pack_start(sig, False, False, 0)
+
+        name_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        name_lbl = Gtk.Label(label=dev["name"], xalign=0)
+        name_lbl.get_style_context().add_class("bt-name")
+        name_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        name_lbl.set_tooltip_text(dev["name"])
+        name_col.pack_start(name_lbl, False, False, 0)
+        meta_bits = []
+        meta_bits.append("paired" if dev["paired"] else "not paired")
+        if dev["connected"]:
+            meta_bits.append("connected")
+        meta_lbl = Gtk.Label(label=" · ".join(meta_bits), xalign=0)
+        meta_lbl.get_style_context().add_class("bt-meta")
+        name_col.pack_start(meta_lbl, False, False, 0)
+        inner.pack_start(name_col, True, True, 0)
+
+        if dev["paired"]:
+            selected = Gtk.CheckButton()
+            selected.set_tooltip_text("Include in Connect selected")
+            selected.set_active(dev['path'] in self._selected)
+            selected.connect('toggled', lambda button: self._select(dev['path'], button.get_active()))
+            inner.pack_start(selected, False, False, 0)
+        operation = Gtk.Button(label="Disconnect" if dev['connected'] else "Connect" if dev['paired'] else "Pair")
+        operation.get_style_context().add_class('bt-iconbtn')
+        operation.set_sensitive(dev['path'] not in self._pending)
+        operation.connect('clicked', lambda *_: self._operate(dev))
+        inner.pack_start(operation, False, False, 0)
+        row_status = Gtk.Label(label=self._pending.get(dev['path'], self._errors.get(dev['path'], '')))
+        row_status.set_max_width_chars(20)
+        row_status.set_ellipsize(Pango.EllipsizeMode.END)
+        row_status.set_tooltip_text(self._errors.get(dev['path'], ''))
+        row_status.get_style_context().add_class("bt-meta")
+        if dev['path'] in self._errors:
+            row_status.get_style_context().add_class("error")
+        elif dev['path'] in self._pending:
+            row_status.get_style_context().add_class("pending")
+        inner.pack_start(row_status, False, False, 0)
+
+        evbox = Gtk.EventBox()
+        evbox.get_style_context().add_class("bt-row")
+        evbox.add(inner)
+        evbox.add_events(Gdk.EventMask.BUTTON_PRESS_MASK
+                          | Gdk.EventMask.ENTER_NOTIFY_MASK
+                          | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        evbox.connect("enter-notify-event",
+                       lambda w, e: (inner.get_style_context().add_class("hover"), False)[1])
+        evbox.connect("leave-notify-event",
+                       lambda w, e: (inner.get_style_context().remove_class("hover"), False)[1])
+        evbox.connect("button-press-event", self._on_row_click, dev, inner, row_status)
+        return evbox
+
+    # -- interaction --------------------------------------------------------
+
+    def _toggle_power(self):
+        if self.adapter_props is None:
+            return
+        target = not self._powered()
+        try:
+            self.adapter_props.Set("org.bluez.Adapter1", "Powered", target)
+        except dbus.DBusException:
+            pass
+        GLib.timeout_add(400, self._refresh_once)
+
+    def _refresh_once(self):
+        self.refresh()
+        return False
+
+    def _start_scan(self):
+        if self.adapter_iface is None or not self._powered() or self._scanning:
+            return
+        try:
+            self.adapter_iface.StartDiscovery()
+        except dbus.DBusException:
+            return
+        self._scanning = True
+        self._set_status("scanning…")
+        if self._scan_tick_id:
+            GLib.source_remove(self._scan_tick_id)
+        self._scan_tick_id = GLib.timeout_add(1000, self._scan_tick)
+        GLib.timeout_add(SCAN_SECONDS * 1000, self._stop_scan)
+
+    def _scan_tick(self):
+        if not self._scanning:
+            return False
+        self._load_and_render()
+        return True
+
+    def _stop_scan(self):
+        self._scanning = False
+        if self._scan_tick_id:
+            GLib.source_remove(self._scan_tick_id)
+            self._scan_tick_id = None
+        try:
+            self.adapter_iface.StopDiscovery()
+        except dbus.DBusException:
+            pass
+        self._load_and_render()
+        return False
+
+    def _select(self, path, selected):
+        (self._selected.add if selected else self._selected.discard)(path)
+        self.connect_selected_btn.set_sensitive(bool(self._selected) and not self._pending)
+
+    def _on_row_click(self, _widget, event, dev, inner, row_status):
+        if dev['path'] in self._pending:
+            return True
+        if event.button == 3 and dev["paired"]:
+            self._forget(dev, row_status)
+        return True
+
+    def _operate(self, dev):
+        path = dev['path']
+        if path in self._pending:
+            return
+        self._errors.pop(path, None)
+        self._pending[path] = 'Disconnecting' if dev['connected'] else 'Connecting' if dev['paired'] else 'Pairing'
+        worker = self._disconnect_worker if dev['connected'] else self._connect_worker if dev['paired'] else self._pair_worker
+        self._load_and_render()
+        threading.Thread(target=worker, args=(path,), daemon=True).start()
+
+    def _connect_selected(self):
+        paths = [path for path in sorted(self._selected) if path in self._rows and self._rows[path]['paired'] and not self._rows[path]['connected']]
+        if not paths or self._pending:
+            return
+        for path in paths:
+            self._pending[path] = 'Connecting'
+            self._errors.pop(path, None)
+        self._load_and_render()
+        def connect_all():
+            # Sequential handshakes avoid controller-busy pairing races. No
+            # existing connection is disconnected when another one is added.
+            for path in paths:
+                self._connect_worker(path)
+        threading.Thread(target=connect_all, daemon=True).start()
+
+    def _device_worker(self, path, action):
+        bus = None
+        error = None
+        try:
+            bus = dbus.SystemBus(private=True)
+            obj = bus.get_object(BLUEZ, path)
+            iface = dbus.Interface(obj, 'org.bluez.Device1')
+            if action == 'pair':
+                iface.Pair(timeout=60)
+                dbus.Interface(obj, dbus.PROPERTIES_IFACE).Set('org.bluez.Device1', 'Trusted', True)
+            if action == 'disconnect':
+                iface.Disconnect(timeout=20)
+            else:
+                iface.Connect(timeout=25)
+        except dbus.DBusException as failure:
+            error = failure.get_dbus_message()
+        finally:
+            if bus is not None:
+                bus.close()
+        GLib.idle_add(self._on_op_done, path, error)
+
+    def _connect_worker(self, path):
+        self._device_worker(path, 'connect')
+
+    def _pair_worker(self, path):
+        self._device_worker(path, 'pair')
+
+    def _disconnect_worker(self, path):
+        self._device_worker(path, 'disconnect')
+
+    def _on_op_done(self, path, error):
+        self._pending.pop(path, None)
+        if error:
+            self._errors[path] = error
+        else:
+            self._errors.pop(path, None)
+        if not self._closed:
+            self._load_and_render()
+        return False
+
+    def _forget(self, dev, row_status):
+        row_status.set_text("forgetting…")
+
+        def worker():
+            try:
+                bus = dbus.SystemBus(private=True)
+                adapter = dbus.Interface(bus.get_object(BLUEZ, self.adapter_path),
+                                          "org.bluez.Adapter1")
+                adapter.RemoveDevice(dev["path"])
+            except dbus.DBusException:
+                pass
+            GLib.idle_add(lambda: (self._load_and_render(), False)[1])
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _prompt_pincode(self, device_path):
+        return self._prompt_code(device_path, "pin code for", visibility=True)
+
+    def _prompt_passkey(self, device_path):
+        text = self._prompt_code(device_path, "passkey for", visibility=True)
+        if text is None or not text.isdigit():
+            return None
+        return int(text)
+
+    def _prompt_code(self, device_path, verb, visibility):
+        """Runs on the main thread (dispatched by the D-Bus mainloop while
+        our Pair() call sits blocked in a worker thread) -- safe to pop a
+        real modal GTK dialog, same trick wifi-menu's passphrase prompt uses."""
+        name = device_path.rsplit("/", 1)[-1]
+        dialog = Gtk.Dialog(transient_for=self, modal=True, destroy_with_parent=True)
+        dialog.set_decorated(False)
+        dialog.get_style_context().add_class("bt-pass")
+        GtkLayerShell.init_for_window(dialog)
+        GtkLayerShell.set_layer(dialog, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(dialog, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(10)
+        box.set_border_width(18)
+        label = Gtk.Label(label=f"{verb} {name}", xalign=0)
+        label.get_style_context().add_class("bt-pass-label")
+        box.add(label)
+        entry = Gtk.Entry(visibility=visibility, activates_default=True)
+        entry.get_style_context().add_class("bt-pass-entry")
+        box.add(entry)
+
+        cancel_btn = dialog.add_button("CANCEL", Gtk.ResponseType.CANCEL)
+        cancel_btn.get_style_context().add_class("bt-pass-btn")
+        cancel_btn.get_style_context().add_class("bt-cancel-btn")
+        connect_btn = dialog.add_button("CONNECT", Gtk.ResponseType.OK)
+        connect_btn.get_style_context().add_class("bt-pass-btn")
+        connect_btn.get_style_context().add_class("bt-connect-btn")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+
+        self._active_dialog = dialog
+        dialog.show_all()
+        entry.grab_focus()
+        response = dialog.run()
+        text = entry.get_text()
+        dialog.destroy()
+        self._active_dialog = None
+
+        if response == Gtk.ResponseType.OK and text:
+            return text
+        return None
+
+    def _agent_cancel(self, _reason):
+        if self._active_dialog is not None:
+            GLib.idle_add(self._active_dialog.response, Gtk.ResponseType.CANCEL)
+
+    def _on_key(self, _widget, event):
+        if Gdk.keyval_name(event.keyval) == "Escape":
+            self.close_menu()
+            return True
+        return False
+
+    def close_menu(self):
+        self._closed = True
+        if self._poll_id:
+            GLib.source_remove(self._poll_id)
+        if self._scanning:
+            self._stop_scan()
+        self._unregister_agent()
+        self.destroy()
+
+
+def main():
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    lock_path = Path(runtime_dir) / "bt-menu.lock"
+    lock_file = open(lock_path, "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return  # already open somewhere -- don't stack a second popup
+
+    win = BtMenu()
+    win.connect("destroy", Gtk.main_quit)
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

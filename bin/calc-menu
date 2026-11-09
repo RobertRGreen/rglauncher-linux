@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""Cyberpunk calculator popout (waybar custom/calc on-click).
+
+Same GTK3 + gtk-layer-shell family as bt-menu / audio-menu; flock = click again to close.
+Type on the physical keyboard or click keys. Enter/= commits to the tape and the result
+becomes the next expression; Esc closes; c clears; Ctrl+C copies the live result.
+Expressions are evaluated through an ast whitelist -- never eval().
+"""
+
+import ast
+import fcntl
+import operator
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GtkLayerShell
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _cyber_particles import install_particles
+from _cyber_theme import (
+    rgba, scanline_background, chromatic_shadow,
+    BG, BG_CARD, BG_HOT, FG, ACCENT, ACCENT2, MUTED, LINE,
+    FONT_HEAD, FONT_BODY, PULSE_TIMING, pulse_keyframes, blink_keyframes,
+)
+
+CARD_W = 340
+TAPE_LINES = 3
+
+OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+       ast.Div: operator.truediv, ast.Pow: operator.pow, ast.Mod: operator.mod}
+
+
+def calc(expr):
+    """Evaluate a +-*/^() expression; '%' after a number means /100. Raises on anything else."""
+    src = expr.replace("^", "**").replace("%", "*0.01")
+
+    def ev(n):
+        if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+            return float(n.value)
+        if isinstance(n, ast.BinOp) and type(n.op) in OPS:
+            a, b = ev(n.left), ev(n.right)
+            if isinstance(n.op, ast.Pow) and abs(b) > 1000:
+                raise ValueError("exponent too large")
+            return OPS[type(n.op)](a, b)
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
+            return -ev(n.operand) if isinstance(n.op, ast.USub) else ev(n.operand)
+        raise ValueError("bad expression")
+
+    return ev(ast.parse(src, mode="eval").body)
+
+
+def fmt(v):
+    if v != v or v in (float("inf"), float("-inf")):
+        raise ValueError("not finite")
+    return f"{v:.12g}"
+
+
+def show(expr):
+    return expr.replace("*", "×").replace("/", "÷").replace("-", "−")
+
+
+CSS = f"""
+window.calc-root {{ background-color: transparent; }}
+{pulse_keyframes("cm")}
+{blink_keyframes("cm")}
+
+box.calc-card {{
+    background-color: {BG};
+    background-image: {scanline_background()}, linear-gradient(to bottom, {BG_CARD}, {BG});
+    border: 2.5px solid {FG};
+    border-radius: 18px 18px 4px 18px;
+    padding: 18px 20px 20px 20px;
+    animation: cm-pulse 5s {PULSE_TIMING} infinite;
+}}
+label.calc-title {{
+    color: {FG};
+    font-family: "{FONT_HEAD}";
+    font-weight: bold;
+    font-size: 17px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px {rgba(FG, 0.85)}, 0 0 18px {rgba(FG, 0.45)};
+}}
+label.calc-tag {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 10px;
+    letter-spacing: 2px;
+    border: 1px solid {LINE};
+    border-radius: 6px;
+    padding: 1px 6px;
+}}
+box.calc-screen {{
+    background-color: {rgba(BG, 0.85)};
+    border: 1.5px solid {LINE};
+    border-left: 3px solid {ACCENT};
+    border-radius: 4px 12px 4px 12px;
+    padding: 8px 14px 10px 14px;
+}}
+label.calc-tape {{
+    color: {MUTED};
+    font-family: "{FONT_BODY}";
+    font-size: 11px;
+}}
+label.calc-expr {{
+    color: {ACCENT2};
+    font-family: "{FONT_HEAD}";
+    font-size: 38px;
+    text-shadow: 0 0 8px {rgba(ACCENT2, 0.7)}, 0 0 20px {rgba(ACCENT2, 0.3)};
+}}
+label.calc-cursor {{
+    color: {ACCENT};
+    font-family: "{FONT_HEAD}";
+    font-size: 38px;
+    text-shadow: 0 0 8px {rgba(ACCENT, 0.9)};
+    animation: cm-blink 1.1s steps(2, end) infinite;
+}}
+label.calc-preview {{
+    color: {FG};
+    font-family: "{FONT_HEAD}";
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px {rgba(FG, 0.5)};
+}}
+label.calc-preview.err {{ color: {ACCENT}; text-shadow: 0 0 6px {rgba(ACCENT, 0.5)}; }}
+
+button.calc-key, button.calc-key:hover, button.calc-key:active {{
+    background-image: none;
+    background-color: {BG_CARD};
+    border: 1px solid {LINE};
+    border-radius: 4px 10px 4px 10px;
+    color: {FG};
+    font-family: "{FONT_HEAD}";
+    font-size: 21px;
+    padding: 8px 0;
+    box-shadow: none;
+    text-shadow: none;
+}}
+button.calc-key:hover {{
+    border-color: {FG};
+    box-shadow: 0 0 10px 1px {rgba(FG, 0.3)};
+}}
+button.calc-key:active {{ background-color: {BG_HOT}; }}
+
+button.calc-key.op, button.calc-key.op:hover {{ color: {ACCENT2}; }}
+button.calc-key.op:hover {{ border-color: {ACCENT2}; box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.3)}; }}
+button.calc-key.sec, button.calc-key.sec:hover {{ color: {MUTED}; font-size: 15px; padding: 4px 0; }}
+button.calc-key.sec:hover {{ color: {ACCENT2}; border-color: {ACCENT2}; box-shadow: none; }}
+button.calc-key.clr, button.calc-key.clr:hover {{ color: {ACCENT}; }}
+button.calc-key.clr:hover {{ border-color: {ACCENT}; box-shadow: 0 0 10px 1px {rgba(ACCENT, 0.35)}; }}
+button.calc-key.eq, button.calc-key.eq:hover {{
+    background-color: {rgba(ACCENT, 0.18)};
+    border: 1.5px solid {ACCENT};
+    color: {ACCENT};
+    text-shadow: 0 0 8px {rgba(ACCENT, 0.8)};
+}}
+button.calc-key.eq:hover {{ box-shadow: 0 0 14px 2px {rgba(ACCENT, 0.5)}; }}
+button.calc-key.eq:active {{ background-color: {rgba(ACCENT, 0.35)}; }}
+"""
+
+# (label, input token or action, css class, column, row, colspan)
+KEYS = [
+    ("(", "(", "sec", 0, 0, 1), (")", ")", "sec", 1, 0, 1), ("xʸ", "^", "sec", 2, 0, 1), ("±", "neg", "sec", 3, 0, 1),
+    ("AC", "ac", "clr", 0, 1, 1), ("DEL", "bs", "clr", 1, 1, 1), ("%", "%", "op", 2, 1, 1), ("÷", "/", "op", 3, 1, 1),
+    ("7", "7", "", 0, 2, 1), ("8", "8", "", 1, 2, 1), ("9", "9", "", 2, 2, 1), ("×", "*", "op", 3, 2, 1),
+    ("4", "4", "", 0, 3, 1), ("5", "5", "", 1, 3, 1), ("6", "6", "", 2, 3, 1), ("−", "-", "op", 3, 3, 1),
+    ("1", "1", "", 0, 4, 1), ("2", "2", "", 1, 4, 1), ("3", "3", "", 2, 4, 1), ("+", "+", "op", 3, 4, 1),
+    ("0", "0", "", 0, 5, 2), (".", ".", "", 2, 5, 1), ("=", "eq", "eq", 3, 5, 1),
+]
+KEYMAP = {"asterisk": "*", "slash": "/", "plus": "+", "minus": "-", "period": ".", "comma": ".",
+          "percent": "%", "asciicircum": "^", "parenleft": "(", "parenright": ")", "equal": "eq",
+          "KP_Multiply": "*", "KP_Divide": "/", "KP_Add": "+", "KP_Subtract": "-", "KP_Decimal": ".",
+          # numlock off: keypad digits arrive as navigation keysyms
+          "KP_Insert": "0", "KP_End": "1", "KP_Down": "2", "KP_Next": "3", "KP_Left": "4",
+          "KP_Begin": "5", "KP_Right": "6", "KP_Home": "7", "KP_Up": "8", "KP_Prior": "9",
+          "KP_Delete": ".",
+          "Return": "eq", "KP_Enter": "eq", "BackSpace": "bs", "Delete": "ac", "c": "ac"}
+
+
+class Calc(Gtk.Window):
+    def __init__(self):
+        super().__init__()
+        self.expr = ""
+        self.tape = []
+        self.fresh = False  # last action was '=': a digit starts over, an operator continues
+        self._build_ui()
+        self._refresh()
+
+    def _build_ui(self):
+        self.get_style_context().add_class("calc-root")
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_namespace(self, "calc-menu")
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.RIGHT,
+                     GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT):
+            GtkLayerShell.set_anchor(self, edge, True)  # full backdrop so an outside click closes
+
+        self.set_app_paintable(True)
+        screen = self.get_screen()
+        if screen.get_rgba_visual():
+            self.set_visual(screen.get_rgba_visual())
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        backdrop = Gtk.EventBox()
+        backdrop.connect("button-press-event", lambda w, e: self.destroy())
+        self.add(backdrop)
+        swallow = Gtk.EventBox()
+        swallow.connect("button-press-event", lambda w, e: True)
+        backdrop.add(swallow)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        card.get_style_context().add_class("calc-card")
+        card.set_size_request(CARD_W, -1)
+        card.set_halign(Gtk.Align.END)
+        card.set_valign(Gtk.Align.START)
+        card.set_margin_top(44)
+        card.set_margin_end(10)
+        swallow.add(card)
+
+        head = Gtk.Box(spacing=8)
+        title = Gtk.Label(label="CALC//01", xalign=0)
+        title.get_style_context().add_class("calc-title")
+        tag = Gtk.Label(label="ESC TO CLOSE")
+        tag.get_style_context().add_class("calc-tag")
+        head.pack_start(title, True, True, 0)
+        head.pack_end(tag, False, False, 0)
+        card.pack_start(head, False, False, 0)
+
+        screen_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        screen_box.get_style_context().add_class("calc-screen")
+        self.tape_labels = []
+        for _ in range(TAPE_LINES):
+            t = Gtk.Label(label=" ", xalign=1)
+            t.get_style_context().add_class("calc-tape")
+            screen_box.pack_start(t, False, False, 0)
+            self.tape_labels.append(t)
+        row = Gtk.Box()
+        cur = Gtk.Label(label="_")
+        cur.get_style_context().add_class("calc-cursor")
+        self.expr_label = Gtk.Label(label="0", xalign=1)
+        self.expr_label.get_style_context().add_class("calc-expr")
+        self.expr_label.set_ellipsize(3)  # END -- long expressions keep the cursor visible
+        row.pack_end(cur, False, False, 0)
+        row.pack_end(self.expr_label, True, True, 0)
+        screen_box.pack_start(row, False, False, 2)
+        self.preview = Gtk.Label(label=" ", xalign=1)
+        self.preview.get_style_context().add_class("calc-preview")
+        screen_box.pack_start(self.preview, False, False, 0)
+        card.pack_start(screen_box, False, False, 0)
+
+        grid = Gtk.Grid(row_spacing=7, column_spacing=7, column_homogeneous=True)
+        for label, tok, cls, c, r, span in KEYS:
+            b = Gtk.Button(label=label)
+            b.set_can_focus(False)  # keep the keyboard on the window
+            ctx = b.get_style_context()
+            ctx.add_class("calc-key")
+            if cls:
+                ctx.add_class(cls)
+            b.connect("clicked", lambda _b, t=tok: self.press(t))
+            grid.attach(b, c, r, span, 1)
+        card.pack_start(grid, False, False, 0)
+
+        self.particle_layer = install_particles(card)
+        self.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.connect("key-press-event", self._on_key)
+        self.connect("destroy", Gtk.main_quit)
+        self.show_all()
+
+    def _live(self):
+        try:
+            return fmt(calc(self.expr))
+        except Exception:
+            return None
+
+    def _refresh(self):
+        self.expr_label.set_text(show(self.expr) or "0")
+        for lbl, line in zip(self.tape_labels, ([""] * TAPE_LINES + self.tape)[-TAPE_LINES:]):
+            lbl.set_text(line or " ")
+        ctx = self.preview.get_style_context()
+        res = self._live()
+        bare = res is not None and res == self.expr  # don't echo a plain number back
+        ctx.remove_class("err")
+        if not self.expr or bare:
+            self.preview.set_text(" ")
+        elif res is None:
+            # only shout ERR when the user stopped on a complete-looking expression
+            if self.expr[-1] in "0123456789)%":
+                ctx.add_class("err")
+                self.preview.set_text("ERR")
+            else:
+                self.preview.set_text(" ")
+        else:
+            self.preview.set_text("= " + res)
+
+    def press(self, tok):
+        if tok == "ac":
+            self.expr, self.fresh = "", False
+        elif tok == "bs":
+            self.expr = "" if self.fresh else self.expr[:-1]
+            self.fresh = False
+        elif tok == "neg":
+            self.expr = self.expr[1:] if self.expr.startswith("-") else ("-" + self.expr if self.expr else "-")
+        elif tok == "eq":
+            res = self._live()
+            if res is not None and self.expr and res != self.expr:
+                self.tape.append(f"{show(self.expr)} = {res}")
+                self.tape = self.tape[-30:]
+                self.expr, self.fresh = res, True
+        else:
+            if self.fresh and tok not in "+-*/^%":
+                self.expr = ""
+            self.fresh = False
+            self.expr += tok
+        self._refresh()
+
+    def _on_key(self, _w, event):
+        name = Gdk.keyval_name(event.keyval)
+        if name == "Escape":
+            self.destroy()
+        elif name == "c" and event.state & Gdk.ModifierType.CONTROL_MASK:
+            res = self._live()
+            if res:
+                subprocess.Popen(["wl-copy", res])
+        elif name in KEYMAP:
+            self.press(KEYMAP[name])
+        elif name and len(name) == 1 and name in "0123456789":
+            self.press(name)
+        elif name and name.startswith("KP_") and name[3:].isdigit():
+            self.press(name[3:])
+        else:
+            return False
+        return True
+
+
+def main():
+    lock = open(Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "calc-menu.lock", "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return
+    Calc()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        assert fmt(calc("2+3*4")) == "14" and fmt(calc("(1+2)^3")) == "27" and fmt(calc("50%")) == "0.5"
+        assert fmt(calc("0.1+0.2")) == "0.3" and fmt(calc("-5+2")) == "-3"
+        for bad in ("__import__('os')", "1/0", "2^99999", "1+"):
+            try:
+                calc(bad)
+                raise SystemExit(f"accepted {bad}")
+            except SystemExit:
+                raise
+            except Exception:
+                pass
+        print("ok")
+    else:
+        main()

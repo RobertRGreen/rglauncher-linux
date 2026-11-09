@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Terminal
+GenericName=Terminal
+Comment=Open Kitty terminal
+Exec=rglauncher terminal
+TryExec=rglauncher
+Icon=aether-development
+Terminal=false
+StartupNotify=false
+Categories=System;TerminalEmulator;
+Keywords=RGLauncher;Aether;

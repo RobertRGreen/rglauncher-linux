@@ -1,0 +1,4 @@
+[Unit]
+Description=RGLauncher Linux desktop session %i
+Wants=rglauncher-shelf@%i.service
+After=graphical-session-pre.target

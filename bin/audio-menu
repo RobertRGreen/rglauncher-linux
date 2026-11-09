@@ -1,0 +1,1662 @@
+#!/usr/bin/env python3
+"""Cyberpunk audio console -- waybar pulseaudio on-click. Centered 1080p window.
+
+Three pages (all live-synced against pactl / amixer on a poll timer):
+  PLAYBACK  -- matrix: every playing app (rows) x every output (columns); click a cell to
+               move the app there. BUSES rows (virtual sinks) send to outputs via
+               module-loopback. Output headers carry volume / mute / default.
+  RECORDING -- same matrix for mic-capture apps x input devices.
+  INTERFACE -- the Focusrite's own mixer (ALSA controls), generic: enum -> pills,
+               switch -> toggle, integer -> slider; plus a STANDARD ROUTING reset.
+Rows stay alive across polls and update in place (a live GtkScale must not be rebuilt
+under a drag); `self._dragging` guards sliders mid-drag. If the set of columns changes
+the matrix is rebuilt from scratch (rare: a device appears/disappears).
+"""
+
+import fcntl
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib, GtkLayerShell, Pango
+
+sys.path.insert(0, str(Path(__file__).parent))
+import _audiobus
+import _audioeq
+from _audioeq_ui import EQPanel
+import _scarlett
+from _scarlett import hw_card, hw_controls
+from _cyber_particles import install_particles
+from _cyber_theme import (
+    rgba, scanline_background, chromatic_shadow,
+    BG, BG_CARD, BG_HOT, FG, ACCENT, ACCENT2, PURPLE, MUTED, LINE,
+    FONT_HEAD, FONT_BODY, PULSE_TIMING, pulse_keyframes, blink_keyframes,
+)
+
+HIDDEN_APPS = ("aup", "filter-chain", "cava", "audio console eq", "audioconsolespectrum")
+POLL_MS = 700
+LEFT_W = 420        # row label/slider cell; output/input columns share the rest
+APP_VOL_MAX = 150
+DEVICE_VOL_MAX = 100
+
+# Type: ShareTechMono (headings/labels) + JetBrainsMono (body) -- the same HUD/terminal pair as every
+# other popout, so the console reads as the big sibling of audio-menu, not a new product.
+CSS = f"""
+window.am-root {{ background-color: transparent; }}
+{pulse_keyframes("am")}
+{blink_keyframes("am")}
+
+box.am-card {{
+    background-color: {BG};
+    background-image: {scanline_background()}, linear-gradient(to bottom, {BG_CARD}, {BG});
+    border: 2px solid {PURPLE};
+    border-radius: 0;
+    padding: 18px 26px 14px 26px;
+    animation: am-pulse 5s {PULSE_TIMING} infinite;
+}}
+label.am-title {{
+    color: {PURPLE}; font-family: "{FONT_HEAD}"; font-weight: bold; font-size: 26px; letter-spacing: 6px;
+    text-shadow: -2px 0 {rgba(ACCENT, 0.7)}, 2px 0 {rgba(ACCENT2, 0.7)}, 0 0 16px {rgba(PURPLE, 0.8)};
+}}
+label.am-cursor {{
+    color: {ACCENT2}; font-family: "{FONT_BODY}"; font-size: 26px;
+    text-shadow: 0 0 8px {rgba(ACCENT2, 0.85)}; animation: am-blink 1.1s steps(2, end) infinite;
+}}
+label.am-status {{ color: {ACCENT2}; font-family: "{FONT_BODY}"; font-size: 13px; letter-spacing: 1px; }}
+label.am-status.offline {{ color: {ACCENT}; }}
+label.am-section {{
+    color: {FG}; font-family: "{FONT_HEAD}"; font-weight: bold; font-size: 14px; letter-spacing: 4px;
+    padding: 14px 0 0 0;
+}}
+label.am-help {{ color: {MUTED}; font-family: "{FONT_BODY}"; font-size: 12px; padding: 0 0 6px 0; }}
+label.am-meta {{ color: {MUTED}; font-family: "{FONT_BODY}"; font-size: 12px; }}
+label.am-empty {{ color: {MUTED}; font-family: "{FONT_BODY}"; font-size: 13px; padding: 14px; }}
+label.am-name {{ color: {FG}; font-family: "{FONT_BODY}"; font-size: 14px; }}
+label.am-hwname {{ color: {FG}; font-family: "{FONT_BODY}"; font-size: 12px; }}
+label.am-colname {{ color: {FG}; font-family: "{FONT_BODY}"; font-weight: bold; font-size: 12px; }}
+label.am-value {{ color: {FG}; font-family: "{FONT_BODY}"; font-weight: bold; font-size: 12px; }}
+label.am-row-meta {{ color: {MUTED}; font-family: "{FONT_BODY}"; font-size: 11px; }}
+
+/* tabs + header buttons */
+button.am-tab, button.am-tab:hover, button.am-tab:active, button.am-iconbtn, button.am-iconbtn:hover {{
+    background-image: none; background-color: transparent; box-shadow: none; text-shadow: none;
+    border: 1px solid {LINE}; border-radius: 0; color: {MUTED};
+    font-family: "{FONT_HEAD}"; font-weight: bold; font-size: 14px; letter-spacing: 3px; padding: 8px 26px;
+    transition: all 100ms steps(4);
+}}
+button.am-iconbtn, button.am-iconbtn:hover {{ font-size: 16px; padding: 6px 14px; color: {ACCENT2}; }}
+button.am-tab:hover, button.am-iconbtn:hover {{ border-color: {ACCENT2}; color: {ACCENT2};
+    box-shadow: 0 0 12px 1px {rgba(ACCENT2, 0.35)}; }}
+button.am-tab.active {{
+    border: 2px solid {ACCENT}; color: {ACCENT}; background-color: {rgba(ACCENT, 0.12)};
+    box-shadow: 0 0 16px 2px {rgba(ACCENT, 0.4)}; {chromatic_shadow()}
+}}
+
+/* rows + header cells */
+box.am-row, box.am-colhead {{
+    border: 1px solid {LINE}; border-radius: 0; padding: 8px 12px; margin: 3px 0; background-color: {BG_CARD};
+}}
+box.am-row.hover {{ border-color: {ACCENT2}; box-shadow: 0 0 14px 1px {rgba(ACCENT2, 0.25)}; }}
+box.am-colhead {{ background-color: {BG_HOT}; margin-bottom: 6px; }}
+box.am-colhead.default {{ border: 2px solid {FG}; box-shadow: 0 0 16px 2px {rgba(FG, 0.3)}; }}
+box.am-bus {{ border-left: 3px solid {PURPLE}; }}
+
+/* the matrix cell: dim ring when off, glowing disc when this is the route */
+button.am-cell, button.am-cell:hover, button.am-cell:active {{
+    background-image: none; background-color: transparent; border: 1px solid {LINE}; border-radius: 0;
+    color: {LINE}; font-family: "{FONT_BODY}"; font-weight: bold; font-size: 18px; padding: 8px 0;
+    box-shadow: none; text-shadow: none; transition: all 100ms steps(4);
+}}
+button.am-cell:hover {{ border-color: {ACCENT2}; color: {ACCENT2}; box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.3)}; }}
+button.am-cell.active {{
+    background-color: {rgba(ACCENT, 0.16)}; border: 2px solid {ACCENT}; color: {ACCENT};
+    box-shadow: 0 0 14px 2px {rgba(ACCENT, 0.45)}; {chromatic_shadow()}
+}}
+button.am-cell.c-bus.active {{
+    background-color: {rgba(PURPLE, 0.2)}; border-color: {PURPLE}; color: {PURPLE};
+    box-shadow: 0 0 14px 2px {rgba(PURPLE, 0.45)};
+}}
+button.am-cell.c-in.active {{
+    background-color: {rgba(FG, 0.14)}; border-color: {FG}; color: {FG};
+    box-shadow: 0 0 14px 2px {rgba(FG, 0.4)};
+}}
+/* OUT = pink, BUS = purple, IN = green, everywhere */
+box.am-colhead.k-out {{ border-top: 3px solid {ACCENT}; }}
+box.am-colhead.k-bus {{ border-top: 3px solid {PURPLE}; }}
+box.am-colhead.k-in {{ border-top: 3px solid {FG}; }}
+box.am-row.k-out {{ border-left: 3px solid {ACCENT}; }}
+box.am-row.k-in {{ border-left: 3px solid {FG}; }}
+box.am-headrow {{ border: 1px solid transparent; padding: 0 12px; margin: 3px 0; }}
+label.am-tag {{ font-family: "{FONT_HEAD}"; font-weight: bold; font-size: 10px; letter-spacing: 2px; }}
+label.am-tag.k-out {{ color: {ACCENT}; }}
+label.am-tag.k-bus {{ color: {PURPLE}; }}
+label.am-tag.k-in {{ color: {FG}; }}
+label.am-section.k-out {{ color: {ACCENT}; }}
+label.am-section.k-in {{ color: {FG}; }}
+label.am-section.k-bus {{ color: {PURPLE}; }}
+button.am-tab.k-out.active {{ border-color: {ACCENT}; color: {ACCENT}; background-color: {rgba(ACCENT, 0.12)}; }}
+button.am-tab.k-in.active {{
+    border-color: {FG}; color: {FG}; background-color: {rgba(FG, 0.12)};
+    box-shadow: 0 0 16px 2px {rgba(FG, 0.4)};
+}}
+button.am-tab.k-bus.active {{
+    border-color: {PURPLE}; color: {PURPLE}; background-color: {rgba(PURPLE, 0.14)};
+    box-shadow: 0 0 16px 2px {rgba(PURPLE, 0.4)};
+}}
+
+button.am-pill, button.am-pill:hover, button.am-pill:active {{
+    background-image: none; background-color: {BG_CARD}; border: 1px solid {LINE}; border-radius: 0;
+    color: {MUTED}; font-family: "{FONT_BODY}"; font-weight: bold; font-size: 11px; letter-spacing: 1px;
+    padding: 5px 10px; box-shadow: none; text-shadow: none; transition: all 100ms steps(4);
+}}
+button.am-pill:hover {{ border-color: {ACCENT2}; color: {ACCENT2}; box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.3)}; }}
+button.am-pill.active {{
+    background-color: {rgba(ACCENT, 0.14)}; border-color: {ACCENT}; color: {ACCENT};
+    box-shadow: 0 0 12px 2px {rgba(ACCENT, 0.35)}; {chromatic_shadow()}
+}}
+button.am-pill.on {{
+    background-color: {rgba(FG, 0.14)}; border-color: {FG}; color: {FG};
+    box-shadow: 0 0 12px 2px {rgba(FG, 0.35)};
+}}
+
+box.am-row.tight {{ padding: 2px 12px; margin: 2px 0; }}
+button.am-cell.tight, button.am-cell.tight:hover {{ padding: 2px 0; font-size: 13px; }}
+
+entry.am-entry {{
+    background-image: none; background-color: {BG}; border: 1px solid {LINE}; border-radius: 0;
+    color: {ACCENT2}; font-family: "{FONT_BODY}"; font-size: 12px; padding: 5px 8px; caret-color: {ACCENT2};
+    box-shadow: none; min-width: 170px;
+}}
+entry.am-entry:focus {{ border-color: {ACCENT2}; box-shadow: 0 0 10px 1px {rgba(ACCENT2, 0.3)}; }}
+
+scale.am-slider trough {{ background-color: {BG}; border: 1px solid {LINE}; border-radius: 0; min-height: 8px; }}
+scale.am-slider highlight {{ background-color: {ACCENT2}; border-radius: 0; }}
+scale.am-slider slider {{ background-color: {BG}; border: 2px solid {ACCENT2}; border-radius: 0; min-width: 11px; min-height: 17px; }}
+scale.am-slider slider:hover {{ border-color: {FG}; }}
+
+box.am-panel {{ border-left: 2px solid {PURPLE}; padding-left: 14px; margin-right: 18px; }}
+flowboxchild {{ padding: 2px; }}
+scrollbar slider {{ background-color: {rgba(PURPLE, 0.6)}; border-radius: 0; min-width: 6px; }}
+scrollbar trough {{ background-color: transparent; }}
+"""
+
+
+def sh(args, timeout=3):
+    try:
+        return subprocess.run(_audioeq.translate(args), capture_output=True, text=True, timeout=timeout)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+
+def pactl_json(args):
+    r = sh(["pactl", "-f", "json", *args])
+    if r is None or r.returncode != 0:
+        return None
+    try:
+        return json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return None
+
+
+def pactl_text(args):
+    r = sh(["pactl", *args])
+    return r.stdout.strip() if r is not None and r.returncode == 0 else ""
+
+
+def avg_pct(volume_dict):
+    vals = []
+    for chan in (volume_dict or {}).values():
+        try:
+            vals.append(float(chan.get("value_percent", "0%").rstrip("%")))
+        except (ValueError, AttributeError):
+            pass
+    return round(sum(vals) / len(vals)) if vals else 0
+
+
+def pill(label, cls="am-pill", width=30):
+    b = Gtk.Button(label=label)
+    b.get_style_context().add_class(cls)
+    if len(label) > 18:  # short labels (MUTE, INST (guitar)) must never be elided
+        b.get_child().set_ellipsize(Pango.EllipsizeMode.END)
+        b.get_child().set_max_width_chars(width)
+    b.set_tooltip_text(label)
+    return b
+
+
+def set_cls(widget, cls, on):
+    ctx = widget.get_style_context()
+    (ctx.add_class if on else ctx.remove_class)(cls)
+
+
+def label(text, cls, xalign=0, ellipsize=True):
+    l = Gtk.Label(label=text, xalign=xalign)
+    l.get_style_context().add_class(cls)
+    if ellipsize:
+        l.set_ellipsize(Pango.EllipsizeMode.END)
+    return l
+
+
+# -- Focusrite hardware mixer (ALSA controls) ---------------------------------
+
+def hw_group(c):
+    n = c["name"]
+    if c["iface"] != "MIXER" or not c["rw"]:
+        return None
+    if " Mix " in n or n.startswith("Mix "):
+        return "mixes"
+    return "inputs" if n.startswith("Line In") else "route"
+
+
+# plain-language names for the routing enums (what the control actually does)
+_FRIENDLY = [
+    (r"^PCM (\d+) Capture Enum$", lambda m: f"Computer hears (USB capture {int(m[1])})"),
+    (r"^Analogue Output (\d+) Playback Enum$", lambda m: f"Hardware output {int(m[1])} plays"),
+    (r"^DSP Input (\d+) Capture Enum$", lambda m: f"DSP input {int(m[1])} takes"),
+    (r"^Mixer Input (\d+) Capture Enum$", lambda m: f"Mixer input {int(m[1])} takes"),
+    (r"^Direct Monitor Playback Enum$", lambda m: "Direct monitor (hear inputs, bypassing the PC)"),
+    (r"^Input Select Capture Enum$", lambda m: "Input select"),
+    (r"^(Monitor \d+ )?Mix ([A-D]) Input (\d+) Playback Volume$",
+     lambda m: f"{(m[1] or '').strip() + ' ' if m[1] else ''}Mix {m[2]} · input {int(m[3])}"),
+]
+
+
+def hw_label(name):
+    for pat, fn in _FRIENDLY:
+        m = re.match(pat, name)
+        if m:
+            return fn(m)
+    return re.sub(r" (?:Capture |Playback )?(?:Enum|Volume|Switch)$", "", name)
+
+
+# what "standard PC audio" means for the 2i2: analogue in -> DSP -> USB capture, USB playback -> outputs
+STANDARD_ROUTING = [
+    ("Direct Monitor Playback Enum", "Off"),
+    ("DSP Input 1 Capture Enum", "Analogue 1"), ("DSP Input 2 Capture Enum", "Analogue 2"),
+    ("PCM 01 Capture Enum", "DSP 1"), ("PCM 02 Capture Enum", "DSP 2"),
+    ("Analogue Output 01 Playback Enum", "PCM 1"), ("Analogue Output 02 Playback Enum", "PCM 2"),
+]
+
+
+# -- Cairo widgets for the INTERFACE page --------------------------------------------
+
+def _hex(c):
+    return tuple(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))
+
+
+C_FG, C_ACC, C_ACC2, C_PUR, C_MUT, C_LINE, C_BG = (_hex(x) for x in (FG, ACCENT, ACCENT2, PURPLE, MUTED, LINE, BG))
+C_AMBER = _hex("#ffb000")
+
+
+def amp_to_pos(a, floor=-60.0):
+    """linear amplitude (0..1) -> 0..1 on a dBFS scale (floor..0)"""
+    if a <= 0:
+        return 0.0
+    return max(0.0, min(1.0, (20 * math.log10(a) - floor) / -floor))
+
+
+class Knob(Gtk.DrawingArea):
+    """270-degree rotary: drag vertically or scroll. on_change(int raw)."""
+
+    def __init__(self, lo, hi, on_change, fmt, size=210):
+        super().__init__()
+        self.lo, self.hi, self.value, self.cb, self.fmt = lo, hi, lo, on_change, fmt
+        self.set_size_request(size, size)
+        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.SCROLL_MASK)
+        self.drag = None
+        self.connect("draw", self._draw)
+        self.connect("button-press-event", self._press)
+        self.connect("button-release-event", self._release)
+        self.connect("motion-notify-event", self._motion)
+        self.connect("scroll-event", self._scroll)
+
+    @property
+    def dragging(self):
+        return self.drag is not None
+
+    def set_value(self, v):
+        if v != self.value:
+            self.value = v
+            self.queue_draw()
+
+    def _emit(self, v):
+        v = max(self.lo, min(self.hi, int(round(v))))
+        if v != self.value:
+            self.value = v
+            self.queue_draw()
+            self.cb(v)
+
+    def _press(self, w, e):
+        self.drag = (e.y, self.value)
+        return True
+
+    def _release(self, w, e):
+        self.drag = None
+        return True
+
+    def _motion(self, w, e):
+        if self.drag:
+            span = self.hi - self.lo
+            self._emit(self.drag[1] + (self.drag[0] - e.y) * span / 160.0)
+        return True
+
+    def _scroll(self, w, e):
+        self._emit(self.value + (1 if e.direction == Gdk.ScrollDirection.UP else -1))
+        return True
+
+    def _draw(self, w, cr):
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        cx, cy, r = W / 2, H / 2, min(W, H) / 2 - 12
+        a0, a1 = math.radians(135), math.radians(405)
+        frac = (self.value - self.lo) / ((self.hi - self.lo) or 1)
+        cr.set_line_cap(1)
+        cr.set_line_width(10)
+        cr.set_source_rgb(*C_LINE)
+        cr.arc(cx, cy, r, a0, a1)
+        cr.stroke()
+        for glow, alpha in ((16, 0.15), (10, 1.0)):  # neon: fat soft pass then the crisp arc
+            cr.set_line_width(glow)
+            cr.set_source_rgba(*C_ACC, alpha)
+            cr.arc(cx, cy, r, a0, a0 + (a1 - a0) * frac)
+            cr.stroke()
+        ang = a0 + (a1 - a0) * frac  # pointer
+        cr.set_line_width(3)
+        cr.set_source_rgb(*C_FG)
+        cr.move_to(cx + (r - 26) * math.cos(ang), cy + (r - 26) * math.sin(ang))
+        cr.line_to(cx + (r - 8) * math.cos(ang), cy + (r - 8) * math.sin(ang))
+        cr.stroke()
+        cr.set_source_rgb(*C_FG)
+        cr.select_font_face(FONT_BODY, 0, 1)
+        cr.set_font_size(r * 0.34)
+        txt = self.fmt(self.value)
+        ext = cr.text_extents(txt)
+        cr.move_to(cx - ext.width / 2 - ext.x_bearing, cy + ext.height / 2)
+        cr.show_text(txt)
+
+
+class VMeter(Gtk.DrawingArea):
+    """Segmented dBFS bar with peak-hold. set_level(linear 0..1)."""
+
+    def __init__(self, width=18, height=200, segs=30):
+        super().__init__()
+        self.set_size_request(width, height)
+        self.segs, self.level, self.peak, self.clip = segs, 0.0, 0.0, 0
+        self.connect("draw", self._draw)
+
+    def set_level(self, a):
+        pos = amp_to_pos(a)
+        self.level = pos if pos > self.level else self.level * 0.6 + pos * 0.4  # fast attack, soft release
+        self.peak = pos if pos >= self.peak else max(0.0, self.peak - 0.012)
+        if a >= 0.98:
+            self.clip = 40
+        self.clip = max(0, self.clip - 1)
+        self.queue_draw()
+
+    def _draw(self, w, cr):
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        n, gap = self.segs, 2
+        sh_ = (H - 8 - gap * (n - 1)) / n
+        for i in range(n):
+            y = H - (i + 1) * (sh_ + gap) + gap - 6
+            frac = i / n
+            col = C_FG if frac < 0.70 else (C_AMBER if frac < 0.90 else C_ACC)
+            on = frac < self.level
+            cr.set_source_rgba(*col, 1.0 if on else 0.12)
+            cr.rectangle(0, y, W, sh_)
+            cr.fill()
+        py = H - 6 - self.peak * (H - 6)  # peak-hold tick
+        cr.set_source_rgb(*C_ACC2)
+        cr.rectangle(0, max(0, py - 2), W, 2)
+        cr.fill()
+        cr.set_source_rgba(*C_ACC, 1.0 if self.clip else 0.15)  # clip lamp
+        cr.rectangle(0, 0, W, 4)
+        cr.fill()
+
+
+class Fader(Gtk.DrawingArea):
+    """Vertical fader over a raw int range with a dB taper. on_change(int raw)."""
+
+    def __init__(self, lo, hi, db, on_change, height=220, default=None):
+        super().__init__()
+        self.lo, self.hi, self.db, self.cb, self.value = lo, hi, db, on_change, lo
+        self.default = default if default is not None else lo
+        self.set_size_request(56, height)
+        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.SCROLL_MASK)
+        self.dragging = False
+        self.connect("draw", self._draw)
+        self.connect("button-press-event", self._press)
+        self.connect("button-release-event", lambda w, e: (setattr(self, "dragging", False), True)[1])
+        self.connect("motion-notify-event", lambda w, e: (self._at(e.y), True)[1] if self.dragging else True)
+        self.connect("scroll-event", lambda w, e: (self._emit(self.value + (2 if e.direction ==
+                     Gdk.ScrollDirection.UP else -2)), True)[1])
+
+    def db_of(self, raw):
+        lo, hi = self.db
+        return lo + (raw - self.lo) * (hi - lo) / ((self.hi - self.lo) or 1)
+
+    def set_value(self, v):
+        if v != self.value:
+            self.value = v
+            self.queue_draw()
+
+    def _emit(self, v):
+        v = max(self.lo, min(self.hi, int(round(v))))
+        if v != self.value:
+            self.value = v
+            self.queue_draw()
+            self.cb(v)
+
+    def _at(self, y):
+        H = self.get_allocated_height() - 36
+        self._emit(self.lo + (1 - (y - 8) / H) * (self.hi - self.lo))
+
+    def _press(self, w, e):
+        if e.type == Gdk.EventType._2BUTTON_PRESS:  # double-click = unity
+            self._emit(self.default)
+            return True
+        self.dragging = True
+        self._at(e.y)
+        return True
+
+    def _draw(self, w, cr):
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        top, trk = 8, H - 36
+        cx = W / 2 + 6
+        cr.set_source_rgb(*C_LINE)
+        cr.rectangle(cx - 3, top, 6, trk)
+        cr.fill()
+        frac = (self.value - self.lo) / ((self.hi - self.lo) or 1)
+        y = top + (1 - frac) * trk
+        cr.set_source_rgba(*C_ACC2, 0.9)
+        cr.rectangle(cx - 3, y, 6, top + trk - y)
+        cr.fill()
+        cr.select_font_face(FONT_BODY, 0, 0)
+        cr.set_font_size(9)
+        for d in (12, 6, 0, -6, -12, -24, -48):  # dB scale ticks
+            if self.db[0] <= d <= self.db[1]:
+                f = (d - self.db[0]) / ((self.db[1] - self.db[0]) or 1)
+                ty = top + (1 - f) * trk
+                cr.set_source_rgba(*C_MUT, 0.9)
+                cr.rectangle(cx - 12, ty, 5, 1)
+                cr.fill()
+                cr.move_to(0, ty + 3)
+                cr.show_text(f"{d:+d}" if d else "0")
+        cr.set_source_rgb(*C_FG)  # cap
+        cr.rectangle(cx - 12, y - 5, 24, 10)
+        cr.fill()
+        cr.set_source_rgb(*C_BG)
+        cr.rectangle(cx - 12, y - 1, 24, 2)
+        cr.fill()
+        cr.set_source_rgb(*C_FG)
+        cr.set_font_size(11)
+        d = self.db_of(self.value)
+        txt = "-∞" if d <= self.db[0] + 0.01 else f"{d:+.1f}"
+        ext = cr.text_extents(txt)
+        cr.move_to(W / 2 - ext.width / 2, H - 6)
+        cr.show_text(txt)
+
+
+class AudioConsole(Gtk.Window):
+    def __init__(self):
+        super().__init__()
+        self.default_sink = ""
+        self.default_source = ""
+        self._dragging = set()  # {key} of sliders mid-drag
+        self.hw_card = hw_card()
+        self._hw_upd = []       # INTERFACE widget updaters, run on every poll
+        self._meters = []       # (level-meter index, VMeter)
+        self._ctl, self._now, self._meter_id = {}, {}, "0"
+        self._flash_msg, self._flash_until = "", 0
+        self._loops = {}        # (src_sink, dst_sink) -> module index
+        self._nullmods = {}     # sink_name -> module-null-sink index
+        self._orphans = {}      # per-app bus -> polls spent with no app on it
+        self._items = {}        # last fetched row items, by page group (click handlers read these)
+        self._build_ui()
+        self.refresh()
+        GLib.timeout_add(POLL_MS, self.refresh)
+        GLib.timeout_add(50, self._meter_tick)
+
+    # -- data ---------------------------------------------------------------
+
+    def refresh(self):
+        sinks_raw = pactl_json(["list", "sinks"])
+        if sinks_raw is None:
+            self._set_status("pactl unreachable", offline=True)
+            return True
+        sources_raw = pactl_json(["list", "sources"]) or []
+        inputs_raw = pactl_json(["list", "sink-inputs"]) or []
+        recs_raw = pactl_json(["list", "source-outputs"]) or []
+        self.default_sink = _audioeq.logical(pactl_text(["get-default-sink"]))
+        self.default_source = _audioeq.logical(pactl_text(["get-default-source"]))
+
+        desc = {x["name"]: x.get("description") or x["name"] for x in sinks_raw + sources_raw}
+        sink_by_idx = {s["index"]: _audioeq.logical(s["name"]) for s in sinks_raw}
+        source_by_idx = {s["index"]: _audioeq.logical(s["name"]) for s in sources_raw}
+
+        # modules first: a virtual (null) sink is a bus, every module-loopback is "bus.monitor -> sink"
+        virtual, loops, nullmods = set(), {}, {}
+        for m in (l.split("\t") for l in pactl_text(["list", "modules", "short"]).splitlines()):
+            if len(m) < 2:
+                continue  # continuation lines of multi-line module args
+            args = dict(p.split("=", 1) for p in (m[2] if len(m) > 2 else "").split() if "=" in p)
+            if m[1] == "module-null-sink" and "sink_name" in args:
+                virtual.add(args["sink_name"])
+                nullmods[args["sink_name"]] = m[0]
+            elif m[1] == "module-loopback" and "source" in args and "sink" in args:
+                loops[(args["source"].removesuffix(".monitor"), _audioeq.logical(args["sink"]))] = m[0]
+        self._loops, self._nullmods = loops, nullmods
+
+        def col(x, default, kind):
+            return {"name": x["name"], "desc": desc[x["name"]], "state": x.get("state", "?").lower(),
+                    "mute": bool(x.get("mute")), "pct": avg_pct(x.get("volume")),
+                    "default": x["name"] == default, "kind": kind,
+                    "aup": x["name"].startswith("aup")}  # AUP manages its own buses: hands off
+
+        # ac_app_* = per-app fan-out buses this console builds; aup_cast_* = AUP's per-cast-device sinks
+        # (AUP creates/removes those itself, e.g. the stale Bedroom Assistant one). Plumbing, no column.
+        sinks = sorted((col(s, self.default_sink, "bus" if s["name"] in virtual else "out")
+                        for s in sinks_raw if not s["name"].startswith(("ac_app_", "aup_cast_", "ac_eq_"))),
+                       key=lambda c: (c["kind"] != "out", c["aup"], c["desc"]))
+        sources = [col(s, self.default_source, "in") for s in sources_raw
+                   if s.get("properties", {}).get("device.class") != "monitor"
+                   and not s["name"].startswith("ac_eq_")]
+
+        rules = _audiobus.load()["apps"]
+
+        def streams(raw, vkind, target_key, names, skip_modules):
+            out = {}
+            for i in raw:
+                if skip_modules and i.get("owner_module") not in (None, "n/a"):
+                    continue
+                props = i.get("properties", {})
+                if str(props.get("node.name", "")).startswith("ac_eq_"):
+                    continue
+                idx = str(i["index"])
+                name = (props.get("application.name") or props.get("media.name")
+                        or props.get("node.name") or f"stream {idx}")
+                if name.lower().startswith(HIDDEN_APPS):
+                    continue  # AUP's own delay/filter pipeline, managed by AUP
+                target = names.get(i.get(target_key), "")
+                bus = target if target.startswith("ac_app_") else None
+                # a fanned-out app sits on its private bus; its real targets are that bus's loopbacks
+                active = {d for (src, d) in loops if src == bus} if bus else {target}
+                out[idx] = {
+                    "id": idx, "vkind": vkind, "name": name, "bus": bus,
+                    "remembered": vkind == "sink-input" and name in rules,
+                    "meta": ("paused" if i.get("corked") else
+                             ("playing" if vkind == "sink-input" else "recording"))
+                            + (f" · {len(active)} outputs" if len(active) > 1 else "")
+                            + (" · remembered" if vkind == "sink-input" and name in rules else ""),
+                    "mute": bool(i.get("mute")), "pct": avg_pct(i.get("volume")), "vmax": APP_VOL_MAX,
+                    "active": active, "allowed": None,
+                    "cls": "k-out" if vkind == "sink-input" else "k-in",
+                }
+            return out
+
+        apps = streams(inputs_raw, "sink-input", "sink", sink_by_idx, True)
+        recs = streams(recs_raw, "source-output", "source", source_by_idx, True)
+
+        # a fan-out that shrank to one output (e.g. its other target bus was deleted) collapses back
+        for a_ in apps.values():
+            if a_["bus"] and len(a_["active"]) == 1:
+                sh(["pactl", "move-sink-input", a_["id"], next(iter(a_["active"]))])
+                self._drop_bus(a_["bus"])
+
+        # per-app buses whose app is gone get torn down (after a short grace so a fresh one isn't killed)
+        used = {a["bus"] for a in apps.values() if a["bus"]}
+        for n in [c["name"] for c in sinks_raw if c["name"].startswith("ac_app_")]:
+            if n in used:
+                self._orphans.pop(n, None)
+            else:
+                self._orphans[n] = self._orphans.get(n, 0) + 1
+                if self._orphans[n] >= 4:
+                    self._orphans.pop(n)
+                    self._drop_bus(n)
+
+        def reaches(a, b, seen=()):  # is there already a send path a -> ... -> b ?
+            return any(d == b or (d not in seen and reaches(d, b, seen + (a,)))
+                       for (src, d) in loops if src == a)
+
+        buses = {}
+        for c in sinks:
+            if c["kind"] != "bus" or c["aup"]:
+                continue  # AUP buses are columns (route apps TO them) but their sends belong to AUP
+            sends = {d for (s_, d) in loops if s_ == c["name"]}
+            buses[c["name"]] = {
+                "id": c["name"], "vkind": "sink", "name": c["desc"], "cls": "am-bus",
+                "meta": f"bus · {len(sends)} send{'s' if len(sends) != 1 else ''}",
+                "mute": c["mute"], "pct": c["pct"], "vmax": DEVICE_VOL_MAX, "active": sends,
+                "allowed": {d["name"] for d in sinks if d["name"] != c["name"]
+                            and (d["name"] in sends or not reaches(d["name"], c["name"]))},
+            }
+        self._items = {"apps": apps, "recs": recs, "buses": buses}
+
+        self._sync_matrix(self.play, sinks, "sink", {"apps": apps, "buses": buses})
+        self._sync_matrix(self.rec, sources, "source", {"recs": recs})
+        self._refresh_hw()
+
+        playing = sum(1 for a in apps.values() if a["meta"] == "playing")
+        self._set_status(f"{len(sinks)} outputs · {len(sources)} inputs · {playing} playing · "
+                         f"{len(buses)} buses · {len(loops)} sends")
+        return True
+
+    def _sync_section(self, box, cache, fresh, build_fn, update_fn, empty_text):
+        EMPTY = "__empty__"
+        for k in (set(cache) - {EMPTY}) - set(fresh):
+            box.remove(cache.pop(k)["widget"])
+        if not fresh:
+            if EMPTY not in cache:
+                lbl = Gtk.Label(label=empty_text, xalign=0.5)
+                lbl.get_style_context().add_class("am-empty")
+                box.pack_start(lbl, False, False, 0)
+                cache[EMPTY] = {"widget": lbl}
+            box.show_all()
+            return
+        if EMPTY in cache:
+            box.remove(cache.pop(EMPTY)["widget"])
+        for k, item in fresh.items():
+            if k not in cache:
+                cache[k] = build_fn(item)
+                box.pack_start(cache[k]["widget"], False, False, 0)
+            else:
+                update_fn(cache[k], item)
+        box.show_all()
+
+    # -- matrix (rows x columns) --------------------------------------------------
+
+    def _slider(self, key, vmax, on_change):
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, vmax, 1)
+        scale.set_draw_value(False)
+        scale.get_style_context().add_class("am-slider")
+        val = label("0%", "am-value", xalign=1, ellipsize=False)
+        val.set_size_request(40, -1)
+        scale.connect("button-press-event", lambda w, e: self._dragging.add(key))
+        scale.connect("button-release-event", lambda w, e: self._drag_end(key))
+        hid = scale.connect("value-changed", lambda w: (
+            val.set_text(f"{int(w.get_value())}%"), on_change(int(w.get_value()))))
+        return scale, val, hid
+
+    def _put_slider(self, c, key, pct):
+        if key in self._dragging:
+            return
+        c["scale"].handler_block(c["hid"])
+        c["scale"].set_value(pct)
+        c["scale"].handler_unblock(c["hid"])
+        c["val"].set_text(f"{pct}%")
+
+    def _col_width(self, n):
+        return max(120, min(210, (self.inner_w - LEFT_W - 40 - 6 * n) // max(n, 1)))
+
+    def _sync_matrix(self, page, cols, ckind, groups):
+        sig = tuple(c["name"] for c in cols)
+        if sig != page["sig"]:  # column set changed: rebuild the whole page
+            page["sig"] = sig
+            page["colw"] = self._col_width(len(cols))
+            for ch in page["head"].get_children():
+                page["head"].remove(ch)
+            # header cell + every row cell of a column share a SizeGroup, so they can never drift apart
+            page["sg"] = {"left": Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)}
+            for c in cols:
+                page["sg"][c["name"]] = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+            spacer = Gtk.Box()
+            spacer.set_size_request(LEFT_W, -1)
+            page["sg"]["left"].add_widget(spacer)
+            page["head"].pack_start(spacer, False, False, 0)
+            page["heads"] = {}
+            for c in cols:
+                page["heads"][c["name"]] = self._build_colhead(c, ckind, page["colw"])
+                page["sg"][c["name"]].add_widget(page["heads"][c["name"]]["widget"])
+                page["head"].pack_start(page["heads"][c["name"]]["widget"], False, False, 0)
+            page["head"].show_all()
+            for g in page["groups"].values():
+                for ch in g["box"].get_children():
+                    g["box"].remove(ch)
+                g["cache"].clear()
+        for c in cols:
+            self._update_colhead(page["heads"][c["name"]], c, ckind)
+        for gname, items in groups.items():
+            g = page["groups"][gname]
+            self._sync_section(
+                g["box"], g["cache"], items,
+                lambda it: self._build_row(it, cols, page),
+                lambda cache, it: self._update_row(cache, it), g["empty"])
+
+    def _build_colhead(self, col, ckind, w):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.get_style_context().add_class("am-colhead")
+        box.get_style_context().add_class("k-" + col["kind"])
+        box.set_size_request(w, -1)
+        tag = label({"out": "▲ OUTPUT", "bus": "◆ BUS", "in": "▼ INPUT"}[col["kind"]]
+                    + ("  · AUP" if col["aup"] else ""), "am-tag")
+        tag.get_style_context().add_class("k-" + col["kind"])
+        name = label(col["desc"], "am-colname")
+        name.set_tooltip_text(col["desc"])
+        meta = label("", "am-row-meta")
+        key = (ckind, col["name"])
+        scale, val, hid = self._slider(key, DEVICE_VOL_MAX, lambda p: subprocess.run(
+            ["pactl", f"set-{ckind}-volume", col["name"], f"{p}%"], capture_output=True))
+        srow = Gtk.Box(spacing=6)
+        srow.pack_start(scale, True, True, 0)
+        srow.pack_start(val, False, False, 0)
+        brow = Gtk.Box(spacing=6)
+        mute = pill("MUTE")
+        mute.connect("clicked", lambda *_: self._act(
+            ["pactl", f"set-{ckind}-mute", col["name"], "toggle"]))
+        dflt = pill("DEFAULT")
+        dflt.connect("clicked", lambda *_: self._act(
+            ["pactl", f"set-default-{ckind}", col["name"]]))
+        brow.pack_start(mute, True, True, 0)
+        brow.pack_start(dflt, True, True, 0)
+        eq_button = pill("EQ")
+        eq_button.set_tooltip_text("Per-device EQ · 4–24 bands · live spectrum / waterfall")
+        eq_button.connect("clicked", lambda *_: self._open_eq(ckind, col))
+        for wdg in (tag, name, meta, srow, brow):
+            box.pack_start(wdg, False, False, 0)
+        box.pack_start(eq_button, False, False, 0)
+        return {"widget": box, "meta": meta, "mute": mute, "dflt": dflt,
+                "scale": scale, "val": val, "hid": hid, "key": key, "eq": eq_button}
+
+    def _update_colhead(self, h, col, ckind):
+        eqs = _audioeq.settings(ckind, col["name"])
+        on = eqs.get("enabled", False)
+        h["eq"].set_label("EQ · " + ("BYPASS" if eqs.get("bypass") else str(eqs["bands"]) + " BANDS") if on else "EQ")
+        set_cls(h["eq"], "on", on and not eqs.get("bypass"))
+        h["meta"].set_text(col["state"])
+        set_cls(h["mute"], "on", col["mute"])
+        set_cls(h["widget"], "default", col["default"])
+        set_cls(h["dflt"], "active", col["default"])
+        h["dflt"].set_label("DEFAULT" if col["default"] else "SET DEFAULT")
+        self._put_slider(h, h["key"], col["pct"])
+
+    def _build_row(self, item, cols, page):
+        row = Gtk.Box(spacing=6)
+        row.get_style_context().add_class("am-row")
+        if item["cls"]:
+            row.get_style_context().add_class(item["cls"])
+        row.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        row.connect("enter-notify-event", lambda w, e: (set_cls(row, "hover", True), False)[1])
+        row.connect("leave-notify-event", lambda w, e: (set_cls(row, "hover", False), False)[1])
+
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        left.set_size_request(LEFT_W, -1)
+        page["sg"]["left"].add_widget(left)
+        name = label(item["name"], "am-name")
+        meta = label(item["meta"], "am-row-meta")
+        top = Gtk.Box(spacing=8)
+        top.pack_start(name, True, True, 0)
+        top.pack_start(meta, False, False, 0)
+        forget = None
+        if item["vkind"] == "sink-input":
+            forget = pill("FORGET")
+            forget.set_tooltip_text("stop remembering this app's outputs")
+            forget.set_no_show_all(True)
+            forget.connect("clicked", lambda *_: self._forget_app(item["name"]))
+            top.pack_start(forget, False, False, 0)
+        if item["id"].startswith("ac_bus_"):
+            rm = pill("DELETE BUS")
+            rm.connect("clicked", lambda *_: self._delete_bus(item["id"]))
+            top.pack_start(rm, False, False, 0)
+        key = (item["vkind"], item["id"])
+        scale, val, hid = self._slider(key, item["vmax"], lambda p, k=item: subprocess.run(
+            ["pactl", f"set-{k['vkind']}-volume", k["id"], f"{p}%"], capture_output=True))
+        # Initial observation must not send a physical volume command.
+        scale.handler_block(hid)
+        try:
+            scale.set_value(item["pct"])
+        finally:
+            scale.handler_unblock(hid)
+        val.set_text(f"{item['pct']}%")
+        mute = pill("MUTE")
+        mute.connect("clicked", lambda *_: self._act(
+            ["pactl", f"set-{item['vkind']}-mute", item["id"], "toggle"]))
+        bot = Gtk.Box(spacing=8)
+        bot.pack_start(scale, True, True, 0)
+        bot.pack_start(val, False, False, 0)
+        bot.pack_start(mute, False, False, 0)
+        left.pack_start(top, False, False, 0)
+        left.pack_start(bot, False, False, 0)
+        row.pack_start(left, False, False, 0)
+
+        cells = {}
+        for c in cols:
+            b = Gtk.Button(label="○")
+            b.get_style_context().add_class("am-cell")
+            b.get_style_context().add_class("c-" + c["kind"])
+            b.set_size_request(page["colw"], -1)
+            page["sg"][c["name"]].add_widget(b)
+            b.set_tooltip_text(f"{item['name']}  →  {c['desc']}")
+            b.connect("clicked", lambda w, n=c["name"]: self._cell_click(item["vkind"], item["id"], n))
+            row.pack_start(b, False, False, 0)
+            cells[c["name"]] = b
+        cache = {"widget": row, "name": name, "meta": meta, "mute": mute, "scale": scale,
+                 "val": val, "hid": hid, "key": key, "cells": cells, "forget": forget}
+        self._update_row(cache, item)
+        return cache
+
+    def _update_row(self, c, item):
+        c["name"].set_text(item["name"])
+        c["meta"].set_text(item["meta"])
+        set_cls(c["mute"], "on", item["mute"])
+        if c.get("forget"):
+            c["forget"].set_visible(bool(item.get("remembered")))
+        self._put_slider(c, c["key"], item["pct"])
+        for cname, b in c["cells"].items():
+            on = cname in item["active"]
+            ok = item["allowed"] is None or cname in item["allowed"]
+            b.set_label("●" if on else ("○" if ok else "—"))
+            b.set_sensitive(ok)
+            set_cls(b, "active", on)
+
+    # -- actions ---------------------------------------------------------------
+
+    def _cell_click(self, vkind, rid, col):
+        if vkind == "sink-input":
+            self._route_app(self._items["apps"].get(rid), col)
+        elif vkind == "sink":  # bus send toggle
+            mod = self._loops.get((rid, col))
+            if mod:
+                sh(["pactl", "unload-module", mod])
+            else:
+                _audiobus.loopback(rid, col)
+            if rid.startswith(_audiobus.BUS_PREFIX):  # console-owned bus: the sync service re-makes it
+                cfg = _audiobus.load()
+                cfg["sends"] = [p for p in cfg["sends"] if p != [rid, col]] + ([] if mod else [[rid, col]])
+                _audiobus.save(cfg)
+        else:
+            sh(["pactl", f"move-{vkind}", rid, col])
+        GLib.timeout_add(150, lambda: (self.refresh(), False)[1])
+
+    def _route_app(self, app, col):
+        """Toggle `col` in the app's output set, remember it as the app's rule (the audio-bus-sync service
+        re-applies it every time the app or a device appears), and apply it now."""
+        if not app:
+            return
+        new = set(app["active"]) ^ {col}
+        if not new:
+            return  # an app must play somewhere
+        cfg = _audiobus.load()
+        cfg["apps"][app["name"]] = sorted(new)
+        _audiobus.save(cfg)
+        snap = _audiobus.snapshot()
+        live = next((a for a in snap["apps"] if a["idx"] == app["id"]), None)
+        if live:
+            _audiobus.route(snap, live, new)
+
+    def _drop_bus(self, bus):
+        _audiobus.drop_bus(_audiobus.snapshot(), bus)
+
+    def _forget_app(self, name):
+        cfg = _audiobus.load()
+        cfg["apps"].pop(name, None)
+        _audiobus.save(cfg)
+        self._flash(f"'{name}' forgotten - it will use the default output next time")
+        self.refresh()
+
+    # -- user buses: named mix points; saved so audio-bus-sync recreates them after a restart ---
+
+    def _new_bus_bar(self):
+        bar = Gtk.Box(spacing=8)
+        self._bus_entry = Gtk.Entry()
+        self._bus_entry.get_style_context().add_class("am-entry")
+        self._bus_entry.set_placeholder_text("new bus name (e.g. Stream mix)")
+        self._bus_entry.set_max_length(30)
+        self._bus_entry.connect("activate", lambda *_: self._new_bus())
+        add = pill("+ NEW BUS")
+        add.connect("clicked", lambda *_: self._new_bus())
+        bar.pack_start(self._bus_entry, False, False, 0)
+        bar.pack_start(add, False, False, 0)
+        bar.set_margin_start(13)
+        return bar
+
+    def _new_bus(self):
+        raw = self._bus_entry.get_text().strip()
+        key = _audiobus.slug(raw)
+        if not key:
+            self._flash("type a bus name first")
+            return
+        cfg = _audiobus.load()
+        cfg["buses"][key] = raw
+        _audiobus.save(cfg)
+        self._bus_entry.set_text("")
+        self._flash(f"bus '{raw}' created and saved - route apps to its column, send it out on its row")
+        _audiobus.reconcile()
+        self.refresh()
+
+    def _delete_bus(self, bus):
+        key = bus.removeprefix(_audiobus.BUS_PREFIX)
+        cfg = _audiobus.load()
+        cfg["buses"].pop(key, None)
+        cfg["sends"] = [p for p in cfg["sends"] if bus not in p]
+        for name, targets in list(cfg["apps"].items()):
+            kept = [t for t in targets if t != bus]
+            if kept:
+                cfg["apps"][name] = kept
+            else:
+                del cfg["apps"][name]
+        _audiobus.save(cfg)
+        self._drop_bus(bus)
+        self.refresh()
+
+    def _act(self, args):
+        sh(args)
+        GLib.timeout_add(80, lambda: (self.refresh(), False)[1])
+
+    def _drag_end(self, key):
+        self._dragging.discard(key)
+        GLib.timeout_add(150, lambda: (self.refresh(), False)[1])
+
+    # -- INTERFACE page: infrastructure ---------------------------------------------
+    # Controls are looked up by ALSA name (self._ctl = structure, self._now = live values).
+    # Each widget registers an updater run on every poll; meters run on their own 50ms timer.
+
+    AUTOGAIN_TXT = {"SuccessDRover": "OK · over-range", "WarnMinGainLimit": "WARN · min gain",
+                    "FailDRunder": "FAIL · too quiet", "FailMaxGainLimit": "FAIL · max gain",
+                    "FailClipped": "FAIL · clipped", "Root": "—", "Invalid": "—"}
+
+    def _reg(self, fn):
+        self._hw_upd.append(fn)
+
+    def _enum(self, name, labels=None):
+        c = self._ctl[name]
+        box = Gtk.Box(spacing=4)
+        btns = []
+        for i, item in enumerate(c["items"]):
+            b = pill((labels or {}).get(item, item))
+            b.connect("clicked", lambda w, i=i: self._hw_set(c["id"], i))
+            box.pack_start(b, False, False, 0)
+            btns.append(b)
+        self._reg(lambda now: [set_cls(b, "active", str(i) == now[name]["val"])
+                               for i, b in enumerate(btns)])
+        return box
+
+    def _switch(self, name, text):
+        c = self._ctl[name]
+        b = pill(text)
+        b.connect("clicked", lambda w: self._hw_set(
+            c["id"], "off" if self._now[name]["val"] == "on" else "on"))
+        self._reg(lambda now: set_cls(b, "active", now[name]["val"] == "on"))
+        return b
+
+    def _status_label(self, name):
+        c = self._ctl[name]
+        l = label("", "am-row-meta")
+        def upd(now):
+            item = c["items"][int(now[name]["val"] or 0)]
+            l.set_text(self.AUTOGAIN_TXT.get(item, item).upper())
+        self._reg(upd)
+        return l
+
+    def _knob(self, name):
+        c = self._ctl[name]
+        d0, d1 = c.get("db", (0.0, float(c["max"])))
+        k = Knob(c["min"], c["max"], lambda v: self._hw_set(c["id"], v, refresh=False),
+                 lambda v: f"{round(d0 + (v - c['min']) * (d1 - d0) / ((c['max'] - c['min']) or 1))} dB")
+        self._reg(lambda now: None if k.dragging else k.set_value(int(now[name]["val"] or 0)))
+        return k
+
+    def _meter(self, idx, w=18, h=200):
+        m = VMeter(w, h)
+        self._meters.append((idx, m))
+        return m
+
+    def _titled(self, title, child, cls="am-panel"):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.get_style_context().add_class(cls)
+        box.pack_start(label(title, "am-section"), False, False, 0)
+        box.pack_start(child, True, True, 0)
+        return box
+
+    def _hint(self, text, width=46):
+        l = label(text, "am-help")
+        l.set_ellipsize(Pango.EllipsizeMode.NONE)
+        l.set_line_wrap(True)
+        l.set_max_width_chars(width)
+        return l
+
+    def _meter_tick(self):
+        if self.hw_card is None or not self.stack.get_visible_child_name() == "iface":
+            return True
+        r = sh(["amixer", "-c", self.hw_card, "cget", f"numid={self._meter_id}"], timeout=1)
+        for ln in (r.stdout if r else "").splitlines():
+            if ln.strip().startswith(": values="):
+                vals = [int(x) for x in ln.split("=", 1)[1].split(",")]
+                for idx, m in self._meters:
+                    if m.get_mapped() and idx < len(vals):
+                        m.set_level(vals[idx] / 4095.0)
+        return True
+
+    # -- INTERFACE > INPUTS ---------------------------------------------------------------
+
+    def _input_strip(self, n):
+        P = f"Line In {n}"
+        row = Gtk.Box(spacing=18)
+        row.pack_start(self._meter(6 + n - 1, 30, 440), False, False, 0)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        col.pack_start(self._knob(f"{P} Gain Capture Volume"), False, False, 0)
+        col.pack_start(label("PREAMP GAIN · drag or scroll", "am-help", xalign=0.5), False, False, 0)
+        col.pack_start(label("SOURCE TYPE", "am-row-meta"), False, False, 0)
+        col.pack_start(self._enum(f"{P} Level Capture Enum", {"Line": "LINE", "Inst": "INST (guitar)"}),
+                       False, False, 0)
+        col.pack_start(label("AIR (brighter top end)", "am-row-meta"), False, False, 0)
+        col.pack_start(self._enum(f"{P} Air Capture Enum",
+                                  {"Off": "OFF", "Presence": "PRESENCE", "Presence + Drive": "PRES + DRIVE"}),
+                       False, False, 0)
+        tog = Gtk.Box(spacing=6)
+        tog.pack_start(self._switch(f"{P} Autogain Capture Switch", "AUTOGAIN"), False, False, 0)
+        tog.pack_start(self._switch(f"{P} Safe Capture Switch", "CLIP SAFE"), False, False, 0)
+        tog.pack_start(self._switch(f"{P} Link Capture Switch", "LINK 1+2"), False, False, 0)
+        col.pack_start(tog, False, False, 4)
+        col.pack_start(self._status_label(f"{P} Autogain Status Capture Enum"), False, False, 0)
+        row.pack_start(col, True, True, 0)
+        card = self._titled(f"▼ INPUT {n}", row)
+        card.get_children()[0].get_style_context().add_class("k-in")
+        card.set_size_request(560, -1)
+        return card
+
+    def _inputs_page(self):
+        page = Gtk.Box(spacing=10)
+        for n in (1, 2):
+            page.pack_start(self._input_strip(n), False, False, 0)  # fixed width: pills must never squeeze
+        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        side.pack_start(self._switch("Line In 1-2 Phantom Power Capture Switch",
+                                     "48V PHANTOM POWER  (inputs 1 + 2)"), False, False, 0)
+        side.pack_start(self._hint("Condenser mics need it. Dynamic and ribbon mics do not, and a ribbon "
+                                   "can be damaged by it."), False, False, 0)
+        side.pack_start(label("DIRECT MONITOR", "am-section"), False, False, 0)
+        side.pack_start(self._enum("Direct Monitor Playback Enum"), False, False, 0)
+        side.pack_start(self._hint("Hear the inputs straight from the interface with no computer delay. "
+                                   "Mono = both inputs centred, Stereo = input 1 left / input 2 right. "
+                                   "Leave Off for normal PC audio or you hear yourself twice."),
+                        False, False, 0)
+        meters = Gtk.Box(spacing=28)
+        for title, idxs in (("COMPUTER OUT", (0, 1)), ("COMPUTER IN", (8, 9))):
+            g = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            mm = Gtk.Box(spacing=6)
+            for i in idxs:
+                mm.pack_start(self._meter(i, 30, 300), False, False, 0)
+            g.pack_start(mm, False, False, 0)
+            tg = label(("▲ " if "OUT" in title else "▼ ") + title, "am-tag")
+            tg.get_style_context().add_class("k-out" if "OUT" in title else "k-in")
+            g.pack_start(tg, False, False, 0)
+            meters.pack_start(g, False, False, 0)
+        side.pack_start(label("LIVE LEVELS  ·  ▲ computer out  /  ▼ computer in", "am-section"), False, False, 0)
+        side.pack_start(meters, False, False, 0)
+        page.pack_start(self._titled("MONITORING & POWER", side), True, True, 0)
+        return page
+
+    # -- INTERFACE > ROUTING (patchbay) -----------------------------------------------------
+
+    ROUTE_GROUPS = [
+        ("HARDWARE OUTPUTS", "what the jacks and headphones play",
+         [(f"Analogue Output {n:02d} Playback Enum", f"Output {n} " + side)
+          for n, side in ((1, "(left)"), (2, "(right)"))]),
+        ("COMPUTER CAPTURE", "what apps on this PC can record",
+         [(f"PCM {n:02d} Capture Enum", f"USB capture {n}") for n in range(1, 5)]),
+        ("DSP INPUTS", "feeds the interface's Air / processing",
+         [(f"DSP Input {n} Capture Enum", f"DSP input {n}") for n in (1, 2)]),
+        ("MIXER INPUTS", "feeds the hardware mixer (Mix A–D)",
+         [(f"Mixer Input {n:02d} Capture Enum", f"Mixer input {n}") for n in range(1, 5)]),
+    ]
+    SRC_CAPTION = {"Analogue": "jack input", "Mix": "hw mixer", "DSP": "after DSP", "PCM": "from computer"}
+
+    def _routing_page(self):
+        sources = self._ctl["Analogue Output 01 Playback Enum"]["items"][1:]  # skip Off
+        colw = max(100, min(150, (self.inner_w - 330) // len(sources)))
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        page.pack_start(self._hint("Each row is a destination. Click a column to choose what feeds it "
+                                   "(click the lit one again to switch the row Off).", 150), False, False, 4)
+        head = Gtk.Box(spacing=6)
+        head.set_margin_start(13)
+        sp = Gtk.Box()
+        sp.set_size_request(260, -1)
+        head.pack_start(sp, False, False, 0)
+        for s in sources:
+            hb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            hb.set_size_request(colw, -1)
+            hb.pack_start(label(("▼ " if s.startswith("Analogue") else "▲ " if s.startswith("PCM") else "◆ ")
+                                + s.upper(), "am-colname", xalign=0.5), False, False, 0)
+            hb.pack_start(label(self.SRC_CAPTION.get(s.split()[0], ""), "am-row-meta", xalign=0.5),
+                          False, False, 0)
+            head.pack_start(hb, False, False, 0)
+        page.pack_start(head, False, False, 4)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for title, sub, rows in self.ROUTE_GROUPS:
+            rows = [r for r in rows if r[0] in self._ctl]
+            if not rows:
+                continue
+            sec = label(f"{'▲' if title.startswith('HARDWARE') else '▼' if title.startswith('COMPUTER') else '◆'}"
+                        f" {title} · {sub}", "am-section")
+            sec.get_style_context().add_class("k-out" if title.startswith("HARDWARE")
+                                              else "k-in" if title.startswith("COMPUTER") else "k-bus")
+            body.pack_start(sec, False, False, 0)
+            for name, text in rows:
+                c = self._ctl[name]
+                row = Gtk.Box(spacing=6)
+                row.get_style_context().add_class("am-row")
+                row.get_style_context().add_class("tight")
+                row.pack_start(label(text, "am-name"), False, False, 0)
+                row.get_children()[0].set_size_request(260, -1)
+                cells = []
+                for s in sources:
+                    i = c["items"].index(s)
+                    b = Gtk.Button(label="○")
+                    b.get_style_context().add_class("am-cell")
+                    b.get_style_context().add_class("tight")
+                    b.set_size_request(colw, -1)
+                    b.set_tooltip_text(f"{s}  →  {text}")
+                    b.connect("clicked", lambda w, i=i, n=name, c=c: self._hw_set(
+                        c["id"], 0 if self._now[n]["val"] == str(i) else i))
+                    row.pack_start(b, False, False, 0)
+                    cells.append((i, b))
+                def upd(now, n=name, cells=cells):
+                    v = now[n]["val"]
+                    for i, b in cells:
+                        b.set_label("●" if str(i) == v else "○")
+                        set_cls(b, "active", str(i) == v)
+                self._reg(upd)
+                body.pack_start(row, False, False, 0)
+        page.pack_start(self._scroller(body), True, True, 0)
+        std = pill("RESTORE STANDARD PC ROUTING")
+        std.connect("clicked", lambda *_: self._hw_standard())
+        page.pack_start(std, False, False, 6)
+        return page
+
+    # -- INTERFACE > MIXER -------------------------------------------------------------------
+
+    def _mix_card(self, title, prefix):
+        row = Gtk.Box(spacing=8)
+        for n in range(1, 5):
+            name = f"{prefix} Input {n:02d} Playback Volume"
+            if name not in self._ctl:
+                continue
+            c = self._ctl[name]
+            db = c.get("db", (-80.0, 12.0))
+            unity = round(c["min"] + (0 - db[0]) * (c["max"] - c["min"]) / ((db[1] - db[0]) or 1))
+            f = Fader(c["min"], c["max"], db, lambda v, c=c: self._hw_set(c["id"], v, refresh=False),
+                      height=250, default=unity)
+            self._reg(lambda now, f=f, name=name: None if f.dragging else f.set_value(int(now[name]["val"] or 0)))
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            mf = Gtk.Box(spacing=3)
+            mf.pack_start(f, False, False, 0)
+            mf.pack_start(self._meter(2 + n - 1, 10, 250), False, False, 0)
+            col.pack_start(mf, False, False, 0)
+            src = label("", "am-colname", xalign=0.5)
+            mname = f"Mixer Input {n:02d} Capture Enum"
+            if mname in self._ctl:
+                items = self._ctl[mname]["items"]
+                self._reg(lambda now, src=src, mname=mname, items=items:
+                          src.set_text(items[int(now[mname]["val"] or 0)].upper()))
+            col.pack_start(src, False, False, 0)
+            col.pack_start(label(f"input {n}", "am-row-meta", xalign=0.5), False, False, 0)
+            row.pack_start(col, False, False, 0)
+        return self._titled(title, row)
+
+    def _mixer_page(self):
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        page.pack_start(self._hint("Each card is one hardware mix: how loud each mixer input is inside it. "
+                                   "Under every fader is what currently feeds that input (set on ROUTING). "
+                                   "To hear a mix, route a Hardware Output to it. Double-click a fader = 0 dB.",
+                                   150), False, False, 4)
+        flow = Gtk.FlowBox()
+        flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        flow.set_max_children_per_line(5)
+        flow.set_homogeneous(False)
+        for letter in "ABCD":
+            if f"Mix {letter} Input 01 Playback Volume" in self._ctl:
+                flow.add(self._mix_card(f"MIX {letter}", f"Mix {letter}"))
+        for m in (1, 2):
+            for letter in "ABCD":
+                p = f"Monitor {m} Mix {letter}"
+                if f"{p} Input 01 Playback Volume" in self._ctl:
+                    flow.add(self._mix_card(f"MONITOR {m} · MIX {letter}", p))
+        page.pack_start(self._scroller(flow), True, True, 0)
+        return page
+
+    # -- INTERFACE > DEVICE -------------------------------------------------------------------
+
+    RATES = [("44.1k", 44100), ("48k", 48000), ("88.2k", 88200), ("96k", 96000), ("AUTO", 0)]
+
+    def _iscale(self, name, lo, hi, to_raw, from_raw, fmt):
+        c = self._ctl[name]
+        key = ("hw", name)
+        sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, 1)
+        sc.set_draw_value(False)
+        sc.set_size_request(340, -1)
+        sc.get_style_context().add_class("am-slider")
+        val = label(fmt(lo), "am-value", xalign=1, ellipsize=False)
+        val.set_size_request(70, -1)
+        sc.connect("button-press-event", lambda w, e: self._dragging.add(key))
+        sc.connect("button-release-event", lambda w, e: self._drag_end(key))
+        hid = sc.connect("value-changed", lambda w: (
+            val.set_text(fmt(w.get_value())), self._hw_set(c["id"], to_raw(w.get_value()), refresh=False)))
+
+        def upd(now):
+            if key not in self._dragging:
+                sc.handler_block(hid)
+                sc.set_value(from_raw(int(now[name]["val"] or 0)))
+                sc.handler_unblock(hid)
+                val.set_text(fmt(sc.get_value()))
+        self._reg(upd)
+        box = Gtk.Box(spacing=10)
+        box.pack_start(sc, False, False, 0)
+        box.pack_start(val, False, False, 0)
+        return box
+
+    def _set_rate(self, hz):
+        sh(["pw-metadata", "-n", "settings", "0", "clock.force-rate", str(hz)])
+
+    def _device_page(self):
+        page = Gtk.Box(spacing=10)
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        sync = label("", "am-colname")
+        self._reg(lambda now: sync.set_text("CLOCK  " + self._ctl["Sync Status"]["items"][
+            int(now["Sync Status"]["val"] or 0)].upper()))
+        left.pack_start(sync, False, False, 0)
+        live = label("", "am-name")
+        def freq(now):
+            try:
+                t = Path(f"/proc/asound/card{self.hw_card}/stream0").read_text()
+                m = re.search(r"Momentary freq = (\d+) Hz", t)
+                live.set_text(f"running at {m[1]} Hz" if m else "idle")
+            except OSError:
+                live.set_text("")
+        self._reg(freq)
+        left.pack_start(live, False, False, 0)
+        left.pack_start(label("SAMPLE RATE", "am-section"), False, False, 0)
+        rates = Gtk.Box(spacing=4)
+        for txt, hz in self.RATES:
+            b = pill(txt)
+            b.connect("clicked", lambda w, hz=hz: (self._set_rate(hz),
+                      GLib.timeout_add(300, lambda: (self.refresh(), False)[1])))
+            rates.pack_start(b, False, False, 0)
+        left.pack_start(rates, False, False, 0)
+        left.pack_start(self._hint("AUTO lets PipeWire choose (48k here). Changing it briefly restarts audio.",
+                                   60), False, False, 0)
+        left.pack_start(label("INFO", "am-section"), False, False, 0)
+        info = label("", "am-row-meta")
+        def finfo(now):
+            fw, mn = now["Firmware Version"]["val"], now["Minimum Firmware Version"]["val"]
+            ok = now["USB Internal Validity"]["val"]
+            info.set_text(f"firmware {fw} (min {mn}) · USB validity {ok}")
+        self._reg(finfo)
+        left.pack_start(info, False, False, 0)
+        page.pack_start(self._titled("STATUS", left), False, False, 0)
+
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        right.pack_start(label("FRONT PANEL BRIGHTNESS", "am-row-meta"), False, False, 0)
+        right.pack_start(self._enum("Front Panel Brightness"), False, False, 0)
+        right.pack_start(label("FRONT PANEL SLEEP (0 = never)", "am-row-meta"), False, False, 0)
+        right.pack_start(self._iscale("Front Panel Sleep Time", 0, 1440, lambda v: int(v) * 60,
+                                      lambda r: r // 60, lambda v: f"{int(v)} min"), False, False, 0)
+        right.pack_start(label("AUTOGAIN TARGET · average level", "am-row-meta"), False, False, 0)
+        right.pack_start(self._iscale("Autogain Mean Target", -30, 0, int, int, lambda v: f"{int(v)} dB"),
+                         False, False, 0)
+        right.pack_start(label("AUTOGAIN TARGET · peak level", "am-row-meta"), False, False, 0)
+        right.pack_start(self._iscale("Autogain Peak Target", -30, 0, int, int, lambda v: f"{int(v)} dB"),
+                         False, False, 0)
+        right.pack_start(self._hint("Autogain listens for a few seconds and sets the preamp so speech hits "
+                                    "these targets. Start it from the INPUTS tab.", 60), False, False, 0)
+        right.pack_start(label("FRONT-PANEL INPUT SELECT", "am-row-meta"), False, False, 0)
+        right.pack_start(self._enum("Input Select Capture Enum"), False, False, 0)
+        page.pack_start(self._titled("INTERFACE SETTINGS", right), False, False, 0)
+        return page
+
+    # -- INTERFACE page assembly ---------------------------------------------------------------
+
+    def _interface_page(self):
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        if self.hw_card is None:
+            outer.pack_start(label("no Focusrite interface detected", "am-empty"), True, True, 0)
+            return outer
+        self._ctl = {c["name"]: c for c in hw_controls(self.hw_card)}
+        self._now = self._ctl
+        self._meter_id = self._ctl["Level Meter"]["id"]
+        sub = Gtk.Stack()
+        tabs = Gtk.Box(spacing=6)
+        self._subtabs = {}
+        for name, text, build in (("inputs", "INPUTS", self._inputs_page),
+                                  ("routing", "ROUTING", self._routing_page),
+                                  ("mixer", "MIXER", self._mixer_page),
+                                  ("device", "DEVICE", self._device_page)):
+            try:
+                sub.add_named(build(), name)
+            except KeyError as e:  # a control this model/firmware doesn't have
+                sub.add_named(label(f"this interface has no control {e}", "am-empty"), name)
+            b = Gtk.Button(label=text)
+            b.get_style_context().add_class("am-tab")
+            b.connect("clicked", lambda w, n=name: self._show_subtab(n))
+            tabs.pack_start(b, False, False, 0)
+            self._subtabs[name] = b
+        self._substack = sub
+        set_cls(self._subtabs["inputs"], "active", True)
+        outer.pack_start(self._preset_bar(), False, False, 2)
+        outer.pack_start(tabs, False, False, 4)
+        outer.pack_start(sub, True, True, 0)
+        return outer
+
+    def _show_subtab(self, name):
+        self._substack.set_visible_child_name(name)
+        for n, b in self._subtabs.items():
+            set_cls(b, "active", n == name)
+        self.refresh()
+
+    def _refresh_hw(self):
+        if self.hw_card is None or self.stack.get_visible_child_name() != "iface":
+            return
+        self._sync_presets()
+        self._now = {c["name"]: c for c in hw_controls(self.hw_card)}
+        for fn in self._hw_upd:
+            try:
+                fn(self._now)
+            except KeyError:
+                pass
+
+    # -- INTERFACE presets (saved by _scarlett; reapplied on reconnect by scarlett-preset watch) ----
+
+    def _flash(self, text):
+        self._flash_msg, self._flash_until = text, GLib.get_monotonic_time() + 3_000_000
+        self._set_status(text)
+
+    def _preset_bar(self):
+        bar = Gtk.Box(spacing=8)
+        bar.pack_start(label("PRESETS", "am-colname", ellipsize=False), False, False, 4)
+        self._preset_box = Gtk.Box(spacing=6)
+        bar.pack_start(self._preset_box, False, False, 0)
+        self._preset_sig = None
+        tail = Gtk.Box(spacing=6)
+        self._preset_entry = Gtk.Entry()
+        self._preset_entry.get_style_context().add_class("am-entry")
+        self._preset_entry.set_placeholder_text("name (blank = update current)")
+        self._preset_entry.set_max_length(40)
+        self._preset_entry.connect("activate", lambda *_: self._preset_save())
+        save = pill("SAVE")
+        save.connect("clicked", lambda *_: self._preset_save())
+        self._del_btn = pill("DELETE")
+        self._del_btn.connect("clicked", lambda *_: self._preset_delete())
+        self._del_armed = False
+        self._auto_btn = pill("AUTO-LOAD ON CONNECT")
+        self._auto_btn.connect("clicked", lambda *_: self._toggle_autoload())
+        for w in (self._preset_entry, save, self._del_btn, self._auto_btn):
+            tail.pack_start(w, False, False, 0)
+        bar.pack_end(tail, False, False, 0)
+        self._autoload_state()
+        return bar
+
+    def _sync_presets(self):
+        sig = (tuple(_scarlett.names()), _scarlett.last())
+        if sig == self._preset_sig:
+            return
+        self._preset_sig = sig
+        for ch in self._preset_box.get_children():
+            self._preset_box.remove(ch)
+        if not sig[0]:
+            self._preset_box.pack_start(label("none saved yet — set the interface up, type a name, SAVE",
+                                              "am-row-meta"), False, False, 0)
+        for n in sig[0]:
+            b = pill(n)
+            set_cls(b, "active", n == sig[1])
+            b.connect("clicked", lambda w, n=n: self._preset_load(n))
+            self._preset_box.pack_start(b, False, False, 0)
+        self._preset_box.show_all()
+
+    def _preset_save(self):
+        name = self._preset_entry.get_text().strip() or _scarlett.last()
+        if not name:
+            self._flash("type a preset name first")
+            return
+        try:
+            _scarlett.save(name, self.hw_card)
+        except ValueError as e:
+            self._flash(str(e))
+            return
+        self._preset_entry.set_text("")
+        self._flash(f"preset '{name}' saved (now the auto-load preset)")
+        self._sync_presets()
+
+    def _preset_load(self, name):
+        n = _scarlett.load(name, self.hw_card)
+        self._flash(f"preset '{name}' loaded · {n} controls")
+        self._sync_presets()
+        self.refresh()
+
+    def _preset_delete(self):
+        name = _scarlett.last()
+        if not name:
+            return
+        if not self._del_armed:  # two clicks: arm, then confirm
+            self._del_armed = True
+            self._del_btn.set_label(f"CONFIRM DELETE '{name}'")
+            GLib.timeout_add(3000, self._disarm_delete)
+            return
+        _scarlett.delete(name)
+        self._disarm_delete()
+        self._flash(f"preset '{name}' deleted")
+        self._sync_presets()
+
+    def _disarm_delete(self):
+        self._del_armed = False
+        self._del_btn.set_label("DELETE")
+        return False
+
+    def _autoload_state(self):
+        r = sh(["systemctl", "--user", "is-enabled", "scarlett-preset.service"])
+        on = bool(r and r.stdout.strip() == "enabled")
+        self._auto_btn.set_label("AUTO-LOAD ON CONNECT: " + ("ON" if on else "OFF"))
+        set_cls(self._auto_btn, "active", on)
+        return on
+
+    def _toggle_autoload(self):
+        on = self._autoload_state()
+        sh(["systemctl", "--user", "disable" if on else "enable", "--now", "scarlett-preset.service"],
+           timeout=10)
+        self._autoload_state()
+
+    # -- Focusrite hardware actions ----------------------------------------------------
+
+    def _hw_set(self, numid, val, refresh=True):
+        sh(["amixer", "-q", "-c", self.hw_card, "cset", f"numid={numid}", str(val)])
+        if refresh:
+            GLib.timeout_add(80, lambda: (self.refresh(), False)[1])
+
+    def _hw_standard(self):
+        by_name = {c["name"]: c for c in hw_controls(self.hw_card)}
+        for name, item in STANDARD_ROUTING:
+            c = by_name.get(name)
+            if c and item in c["items"]:
+                self._hw_set(c["id"], c["items"].index(item), refresh=False)
+        self.refresh()
+
+    # -- UI construction ------------------------------------------------------------
+
+    def _scroller(self, child):
+        sw = Gtk.ScrolledWindow()
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        sw.add(child)
+        return sw
+
+    def _make_page(self, spec):
+        """spec: [(key, title, help, empty_text)] -> (widget, page dict)"""
+        key_kind = {"apps": "out", "buses": "bus", "recs": "in"}
+        page = {"sig": None, "colw": 150, "heads": {}, "groups": {}}
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        head = Gtk.Box(spacing=6)
+        head.get_style_context().add_class("am-headrow")  # same border+padding as a row
+        page["head"] = head
+        outer.pack_start(head, False, False, 6)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for key, title, hlp, empty, *extra in spec:
+            sec = label(title, "am-section")
+            sec.get_style_context().add_class("k-" + key_kind.get(key, "out"))
+            body.pack_start(sec, False, False, 0)
+            body.pack_start(label(hlp, "am-help"), False, False, 0)
+            if extra:
+                body.pack_start(extra[0](), False, False, 4)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            body.pack_start(box, False, False, 0)
+            page["groups"][key] = {"box": box, "cache": {}, "empty": empty}
+        body_scroll = self._scroller(body)
+        body_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        outer.pack_start(body_scroll, True, True, 0)
+        matrix_scroll = Gtk.ScrolledWindow()
+        matrix_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        matrix_scroll.add(outer)
+        return matrix_scroll, page
+
+    def _build_ui(self):
+        self.get_style_context().add_class("am-root")
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_namespace(self, "audio-menu")
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.RIGHT,
+                     GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT):
+            GtkLayerShell.set_anchor(self, edge, True)
+
+        self.set_app_paintable(True)
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+        # 1080p window, clamped on small screens
+        display = Gdk.Display.get_default()
+        mon = display.get_primary_monitor() or display.get_monitor(0)
+        geo = mon.get_geometry()
+        card_w, card_h = min(1920, geo.width - 40), min(1080, geo.height - 60)
+        self.inner_w = card_w - 56
+
+        backdrop = Gtk.EventBox()
+        backdrop.connect("button-press-event", lambda w, e: self.close_menu())
+        self.add(backdrop)
+        swallow = Gtk.EventBox()
+        swallow.connect("button-press-event", lambda w, e: True)
+        backdrop.add(swallow)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        card.get_style_context().add_class("am-card")
+        card.set_size_request(card_w, card_h)
+        card.set_halign(Gtk.Align.CENTER)
+        card.set_valign(Gtk.Align.CENTER)
+        swallow.add(card)
+
+        header = Gtk.Box(spacing=14)
+        header.pack_start(label("AUDIO // CONSOLE", "am-title", ellipsize=False), False, False, 0)
+        header.pack_start(label("_", "am-cursor", ellipsize=False), False, False, 0)
+        self.status_label = label("> loading…", "am-status")
+        self.status_label.set_max_width_chars(45)
+        header.pack_start(self.status_label, True, True, 18)
+        navigation = Gtk.Box(spacing=10)
+        self._tabs = {}
+        for name, text, kind in (("play", "PLAYBACK ▸ OUT", "out"), ("rec", "◂ IN  RECORDING", "in"),
+                                 ("iface", "INTERFACE", "bus")):
+            b = Gtk.Button(label=text)
+            b.get_style_context().add_class("am-tab")
+            b.get_style_context().add_class("k-" + kind)
+            b.connect("clicked", lambda w, n=name: self._show_tab(n))
+            navigation.pack_start(b, False, False, 0)
+            self._tabs[name] = b
+        for text, fn in (("↻", lambda *_: self.refresh()), ("✕", lambda *_: self.close_menu())):
+            b = Gtk.Button(label=text)
+            b.get_style_context().add_class("am-iconbtn")
+            b.connect("clicked", fn)
+            header.pack_start(b, False, False, 0)
+        card.pack_start(header, False, False, 0)
+        card.pack_start(navigation, False, False, 0)
+        card.pack_start(Gtk.Separator(), False, False, 2)
+
+        self.stack = Gtk.Stack()
+        self.stack.set_homogeneous(False)
+        self.stack.set_transition_type(Gtk.StackTransitionType.NONE)
+        play, self.play = self._make_page([
+            ("apps", "APPLICATIONS  ▸  OUTPUTS",
+             "each row is a program making sound. Click output columns to choose where it plays - "
+             "click several (headphones + Bluetooth + a bus) and it plays on all of them at once.",
+             "nothing is playing audio"),
+            ("buses", "BUSES  ◆  mix points you can send to outputs",
+             "a bus collects audio from apps (route an app to a bus column) and forwards it to every output "
+             "you click on its row. AUP's own buses are managed by AUP and only appear as columns.",
+             "no buses yet", self._new_bus_bar)])
+        rec, self.rec = self._make_page([
+            ("recs", "RECORDING APPS  ◂  INPUTS",
+             "each row is a program listening to an input. Click a column to give it that input.",
+             "nothing is recording")])
+        self.stack.add_named(play, "play")
+        self.stack.add_named(rec, "rec")
+        self.stack.add_named(self._interface_page(), "iface")
+        card.pack_start(self.stack, True, True, 0)
+
+        card.pack_start(label("1 playback · 2 recording · 3 interface · drag sliders · esc to close",
+                              "am-meta"), False, False, 0)
+
+        self.particle_layer = install_particles(card)
+        self.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.connect("key-press-event", self._on_key)
+        self.show_all()
+        self._show_tab("play")
+
+    def _open_eq(self, kind, col):
+        old = self.stack.get_child_by_name("eq")
+        if old:
+            old.destroy()
+        previous = self.stack.get_visible_child_name()
+        panel = EQPanel(kind, col["name"], col["desc"], lambda: self._show_tab(previous))
+        self.stack.add_named(panel, "eq")
+        self.stack.set_visible_child_name("eq")
+
+    def _show_tab(self, name):
+        self.stack.set_visible_child_name(name)
+        for n, b in self._tabs.items():
+            set_cls(b, "active", n == name)
+        self.refresh()
+
+    # -- interaction ------------------------------------------------------------------
+
+    def _set_status(self, text, offline=False):
+        if not offline and GLib.get_monotonic_time() < self._flash_until:
+            text = self._flash_msg  # keep a preset/save message visible for a few seconds
+        self.status_label.set_text("> " + text)
+        set_cls(self.status_label, "offline", offline)
+
+    def _on_key(self, _widget, event):
+        k = Gdk.keyval_name(event.keyval)
+        if k == "Escape":
+            self.close_menu()
+            return True
+        tab = {"1": "play", "2": "rec", "3": "iface"}.get(k)
+        if tab:
+            self._show_tab(tab)
+            return True
+        return False
+
+    def close_menu(self):
+        self.destroy()
+
+
+def main():
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    lock_file = open(Path(runtime_dir) / "audio-menu.lock", "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return  # already open -- don't stack a second window
+
+    win = AudioConsole()
+    win.connect("destroy", Gtk.main_quit)
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

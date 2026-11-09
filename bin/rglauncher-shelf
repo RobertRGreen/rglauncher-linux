@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+import sys
+import os
+from pathlib import Path
+sys.dont_write_bytecode = True
+os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
+root = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(root), str(root/'bin')]
+from rglauncher_linux.shelf import main
+raise SystemExit(main())

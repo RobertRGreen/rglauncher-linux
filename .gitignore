@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.vsix
+*.tar.gz
+*.tar.zst
+*.pem
+*.key
+*.private*
+local/
+receipts/
+runtime/
+signing/
+*.log

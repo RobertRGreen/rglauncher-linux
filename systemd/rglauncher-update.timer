@@ -1,0 +1,12 @@
+[Unit]
+Description=Check the configured RGLauncher Linux update channel daily
+
+[Timer]
+OnStartupSec=15min
+OnCalendar=daily
+RandomizedDelaySec=2h
+Persistent=true
+Unit=rglauncher-update.service
+
+[Install]
+WantedBy=timers.target

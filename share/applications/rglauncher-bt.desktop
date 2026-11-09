@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Bluetooth
+GenericName=Bluetooth
+Comment=Manage Bluetooth devices
+Exec=rglauncher bluetooth
+TryExec=rglauncher
+Icon=aether-bluetooth
+Terminal=false
+StartupNotify=false
+Categories=Settings;HardwareSettings;
+Keywords=RGLauncher;Aether;

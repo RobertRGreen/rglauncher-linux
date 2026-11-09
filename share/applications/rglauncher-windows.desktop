@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RGLauncher Windows
+GenericName=Windows
+Comment=Find and switch open windows
+Exec=rglauncher windows
+TryExec=rglauncher
+Icon=aether-window
+Terminal=false
+StartupNotify=false
+Categories=Utility;
+Keywords=RGLauncher;Aether;
