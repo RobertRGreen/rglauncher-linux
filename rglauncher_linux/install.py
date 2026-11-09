@@ -352,12 +352,24 @@ def _shelf_status(path, expected_pid):
 
 def _wait_shelf(release, signature, runtime_dir, pid, *, timeout=5):
     """Require live same-release output children twice before removing old bars."""
-    deadline, previous = time.monotonic() + timeout, None
+    deadline, previous, identity = time.monotonic() + timeout, None, None
     error = "Shelf did not report any ready output children"
     while time.monotonic() < deadline:
         controller = _process(pid)
+        if controller:
+            if identity is not None and controller["start"] != identity:
+                return {"ok": False, "reason": "Shelf service process identity changed during startup"}
+            identity = controller["start"]
+            for key, expected in (("HYPRLAND_INSTANCE_SIGNATURE", signature), ("RGL_RELEASE_ROOT", str(release))):
+                if key in controller and controller[key] != expected:
+                    return {"ok": False, "reason": "Shelf service process identity did not match the selected release/session"}
         if not controller or controller.get("HYPRLAND_INSTANCE_SIGNATURE") != signature or controller.get("RGL_RELEASE_ROOT") != str(release):
-            return {"ok": False, "reason": "Shelf service process identity did not match the selected release"}
+            # Type=simple can become active while /usr/bin/env or the stable
+            # Python wrapper is still preparing its pinned exec. Missing initial
+            # environment is transient; a conflicting identity is never trusted.
+            error, previous = "Shelf wrapper has not finished entering the selected release", None
+            time.sleep(min(.2, max(0, deadline - time.monotonic())))
+            continue
         try:
             response = _shelf_status(runtime_dir / "shelf.sock", pid)
             outputs = response.get("outputs")
@@ -418,12 +430,12 @@ def start_session(release, data, config_home, data_home, state_home, *, cleanup=
     steps["service"] = _run(["systemctl", "--user", "restart" if restart else "start", service])
     verification = _run(["systemctl", "--user", "is-active", service])
     pid = _run(["systemctl", "--user", "show", service, "--property=MainPID", "--value"])
-    process = _process(pid["stdout"]) if pid["ok"] and pid["stdout"].isdigit() else None
-    running = verification["ok"] and process and process.get("HYPRLAND_INSTANCE_SIGNATURE") == signature and process.get("RGL_RELEASE_ROOT") == str(release)
+    service_pid = int(pid["stdout"]) if pid["ok"] and pid["stdout"].isdigit() and int(pid["stdout"]) > 0 else None
+    running = verification["ok"] and service_pid is not None
     readiness = _wait_shelf(release, signature, runtime_dir, int(pid["stdout"])) if running else {"ok": False, "reason": "Service is not running the selected release"}
     running = bool(running and readiness["ok"] and all(step["ok"] for step in steps.values()))
     result = {"status": "running" if running else "partial", "service": service, "session": session,
-              "steps": steps, "verification": verification, "readiness": readiness, "pid": int(pid["stdout"]) if process else None}
+              "steps": steps, "verification": verification, "readiness": readiness, "pid": service_pid}
     if running and cleanup:
         result["old_waybars"] = _terminate_bars(old_bars, signature, release)
     return result

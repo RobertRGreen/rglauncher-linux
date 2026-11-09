@@ -2,9 +2,9 @@
 # Local binary recipe: build the curated runtime archive first, then supply its
 # independently verified SHA256 in RGL_SOURCE_SHA256. No public URL is invented.
 pkgname=rglauncher-linux
-pkgver=0.2.0alpha1
+pkgver=0.2.0alpha2
 pkgrel=1
-_release=0.2.0-alpha.1
+_release=0.2.0-alpha.2
 pkgdesc='Instrument/Score Aether desktop shell for Hyprland and Waybar'
 arch=('x86_64')
 license=('MIT')

@@ -63,7 +63,7 @@ explains signatures, the pinned key, channels, activation order and rollback.
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 tools/build_release.py --kind binary --version 0.2.0-alpha.1 \
+python3 tools/build_release.py --kind binary --version 0.2.0-alpha.2 \
   --output /path/to/new-output
 ```
 

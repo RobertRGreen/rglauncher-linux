@@ -270,6 +270,35 @@ def main(argv=None):
         self.assertEqual(result["status"], "partial")
         terminate.assert_not_called()
 
+    def test_session_start_waits_for_wrapper_pinned_exec_before_readiness(self):
+        release = self.base / "release"
+        wrapper = {"pid": 222, "command": "python3", "start": "30", "HYPRLAND_INSTANCE_SIGNATURE": "fixture-session"}
+        controller = {**wrapper, "RGL_RELEASE_ROOT": str(release)}
+        child = {**controller, "pid": 333, "command": "waybar", "start": "31"}
+        observations = iter([wrapper, controller, controller])
+        active_checks = 0
+        def run(command):
+            nonlocal active_checks
+            if "is-active" in command:
+                active_checks += 1
+                return {"ok": active_checks > 1, "stdout": "active", "stderr": ""}
+            return {"ok": True, "stdout": "222" if "show" in command else "", "stderr": ""}
+        def process(pid):
+            return next(observations) if int(pid) == 222 else child
+        with patch.object(installer, "_run", side_effect=run), patch.object(installer, "_session_bars", return_value=[]), patch.object(installer, "_process", side_effect=process), patch.object(installer, "_shelf_status", return_value={"outputs": {"fixture": {"pid": 333}}}):
+            result = installer.start_session(release, self.data, self.config, self.data, self.state)
+        self.assertEqual(result["status"], "running", result)
+        self.assertEqual(result["readiness"]["outputs"], {"fixture": 333})
+
+    def test_startup_identity_rejects_conflicts_and_pid_reuse_without_socket_use(self):
+        release = self.base / "release"
+        wrapper = {"pid": 222, "command": "python3", "start": "30", "HYPRLAND_INSTANCE_SIGNATURE": "fixture-session"}
+        for observations in ([{**wrapper, "RGL_RELEASE_ROOT": "other"}], [{**wrapper, "HYPRLAND_INSTANCE_SIGNATURE": "other"}], [wrapper, {**wrapper, "start": "31", "RGL_RELEASE_ROOT": str(release)}]):
+            with self.subTest(observations=observations), patch.object(installer, "_process", side_effect=observations), patch.object(installer, "_shelf_status") as status:
+                result = installer._wait_shelf(release, "fixture-session", self.runtime, 222, timeout=.5)
+            self.assertFalse(result["ok"])
+            status.assert_not_called()
+
     def test_shelf_socket_checks_peer_identity_and_status(self):
         path = self.base / "shelf.sock"
         listener = socket.socket(socket.AF_UNIX)
