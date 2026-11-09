@@ -24,16 +24,24 @@ jobs:
       DISPLAY: ""
       WAYLAND_DISPLAY: ""
       HYPRLAND_INSTANCE_SIGNATURE: ""
-      XDG_CONFIG_HOME: ${{ runner.temp }}/rglauncher-ci/config
-      XDG_DATA_HOME: ${{ runner.temp }}/rglauncher-ci/data
-      XDG_STATE_HOME: ${{ runner.temp }}/rglauncher-ci/state
-      XDG_RUNTIME_DIR: ${{ runner.temp }}/rglauncher-ci/runtime
     steps:
       - name: Check out reviewed source
         # actions/checkout v7.0.1, resolved through its official GitHub API tag.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+
+      - name: Prepare isolated XDG directories
+        run: |
+          ci_root="$RUNNER_TEMP/rglauncher-ci"
+          mkdir -p "$ci_root/config" "$ci_root/data" "$ci_root/state" "$ci_root/runtime"
+          chmod 700 "$ci_root/runtime"
+          {
+            printf 'XDG_CONFIG_HOME=%s/config\n' "$ci_root"
+            printf 'XDG_DATA_HOME=%s/data\n' "$ci_root"
+            printf 'XDG_STATE_HOME=%s/state\n' "$ci_root"
+            printf 'XDG_RUNTIME_DIR=%s/runtime\n' "$ci_root"
+          } >> "$GITHUB_ENV"
 
       - name: Install Ubuntu test dependencies
         run: |
@@ -43,8 +51,6 @@ jobs:
             python3-numpy python3-cryptography \
             gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtk-4.0 \
             desktop-file-utils lua5.4
-          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_RUNTIME_DIR"
-          chmod 700 "$XDG_RUNTIME_DIR"
 
       - name: Run isolated core source tests
         run: /usr/bin/python3 -B -m unittest discover -s tests -p 'test_*.py' -v
