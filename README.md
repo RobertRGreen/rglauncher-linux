@@ -39,6 +39,13 @@ The shelf now uses a bounded deck with dimensional instrument icons, compact
 workspace context and a searchable tools chooser. See [the visual and interaction
 construction](docs/shelf-design.md) and [Control Room](docs/control-room.md).
 
+The **Servers** instrument provides live, read-only diagnostics over existing SSH
+connections: CPU/RAM/swap, load, network and disk rates, filesystems, top processes,
+failed systemd units and Docker container state. It samples while the window is
+open, keeps observation ages explicit and stops SSH when closed. Personal host/key
+configuration stays outside the package. See [SSH diagnostics](docs/fleet.md) and
+[the server workbench](docs/fleet-ui.md).
+
 ## Try the command surface
 
 The target is a Wayland session using Hyprland's 0.56 Lua API. Install distribution
@@ -76,7 +83,7 @@ explains signatures, the pinned key, channels, activation order and rollback.
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 tools/build_release.py --kind binary --version 0.2.0-alpha.3 \
+python3 tools/build_release.py --kind binary --version 0.2.0-alpha.4 \
   --output /path/to/new-output
 ```
 

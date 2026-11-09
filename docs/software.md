@@ -19,6 +19,7 @@ an adapter does not relicense the application it styles.
 | Files | Thunar, launched through the public command surface |
 | Terminal | Kitty, launched through the public command surface |
 | Settings / Updates | Original project interface and signed per-user update client |
+| Servers | On-demand read-only SSH diagnostics, observed history, filesystem/service/container evidence; Linux targets need existing shell access and Python 3 |
 | Native appearance | Original GTK2/3/4, Qt5/6/KDE/Quick and Tk preferences from semantic roles; GTK imports its own installed built-in resource |
 | Code editor | Optional data-only VS Code/Code-OSS color/file-icon extension; no executable extension code or marketplace publication |
 
@@ -46,6 +47,7 @@ packages or start services automatically.
 | Qt native integration | Optional `qt5ct`, `qt6ct` and their toolkit libraries/plugins |
 | Tk native integration | Optional `tk`; uses original ttk theme plus standard X11 resource preferences |
 | Clipboard | Optional `wl-clipboard` (`wl-copy`) |
+| Server diagnostics | `openssh` locally; Python 3 and Linux `/proc` on each configured target; no remote agent installation |
 | Desktop portals | Recommended `xdg-desktop-portal-hyprland` and a file-chooser backend appropriate to the user's session |
 | Editor / optional preview | Code-OSS/VS Code for themes; `ffmpeg` only for an explicitly configured secondary video preview |
 

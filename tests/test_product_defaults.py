@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class ProductDefaultsTest(unittest.TestCase):
     def test_generic_bar_actions_have_public_commands(self):
         config = json.loads(re.sub(r"^\s*//.*$", "", (ROOT / "share/waybar/config.jsonc").read_text(), flags=re.M))
-        supported = {"apps", "files", "windows", "audio", "wifi", "bluetooth", "settings"}
+        supported = {"apps", "files", "windows", "audio", "wifi", "bluetooth", "settings", "servers"}
         for key, value in config.items():
             if isinstance(value, dict) and "on-click" in value and key != "hyprland/workspaces":
                 self.assertRegex(value["on-click"], r"^rglauncher [a-z]+$")
@@ -26,7 +26,7 @@ class ProductDefaultsTest(unittest.TestCase):
 
     def test_desktop_entries_are_valid_and_use_included_icons(self):
         entries = sorted((ROOT / "share/applications").glob("rglauncher-*.desktop"))
-        self.assertEqual(len(entries), 9)
+        self.assertEqual(len(entries), 10)
         for path in entries:
             config = configparser.ConfigParser(interpolation=None)
             config.read(path)

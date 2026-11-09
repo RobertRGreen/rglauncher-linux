@@ -10,7 +10,7 @@ distribution. The optional [Arch recipe](../packaging/arch/PKGBUILD) describes
 those dependencies and packages a verified runtime archive. It enables no system
 services and changes no user configuration during a package-manager transaction.
 
-The [GitHub release](https://github.com/RobertRGreen/rglauncher-linux/releases/tag/v0.2.0-alpha.3)
+The [GitHub release](https://github.com/RobertRGreen/rglauncher-linux/releases/tag/v0.2.0-alpha.4)
 contains the runtime archive, matching source archive, signed manifest and hashes.
 The public key is `share/update-keys/rglauncher-2026.pub`; its SHA-256 over the PEM
 file is `20507e6951b03677b115f657aa681cf299751b36d61dfd3fc61d6f3e5ed1521d`.

@@ -31,7 +31,7 @@ SESSION_ENV = ("WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE", "DISPLAY", "XDG
 REQUIRED_FILES = (
     "LICENSE", "THIRD_PARTY_NOTICES", "pyproject.toml",
     *("rglauncher_linux/" + name + ".py" for name in
-      ("__init__", "cli", "paths", "shelf", "shelf_design", "settings", "editor", "native", "install", "update")),
+      ("__init__", "cli", "paths", "shelf", "shelf_design", "settings", "editor", "native", "install", "update", "fleet", "fleet_ui", "servers")),
     *("bin/" + name for name in
       ("rglauncher", "rglauncher-shelf", "rofi-launcher", "hypr-windows", "calc-menu", "audio-menu", "wifi-menu", "bt-menu",
        "_aether_score.py", "_aether_desktop.py", "_aether_material.py", "_aether_surfaces.py", "_aether_tokens.json",
@@ -42,10 +42,11 @@ REQUIRED_FILES = (
     "share/vscode/rglauncher-aether.vsix", "share/hyprland/hyprland.lua", "share/hyprland/snap-layout.lua", "share/hyprland/window-navigation.lua",
     "systemd/rglauncher-update.service", "systemd/rglauncher-update.timer",
     "systemd/rglauncher-shelf@.service", "systemd/rglauncher-session@.target",
+    "share/fleet/sample.py",
     *("assets/shelf-icons/aether-"+name+".svg" for name in
       ("library","folder","development","window","document-code","calculator","audio-console","home")),
 )
-REQUIRED_ACTIONS = {"apps", "windows", "files", "terminal", "calc", "audio", "wifi", "bluetooth", "settings"}
+REQUIRED_ACTIONS = {"apps", "windows", "files", "terminal", "calc", "audio", "wifi", "bluetooth", "settings", "servers"}
 
 
 class InstallError(RuntimeError):

@@ -20,6 +20,7 @@
     "clock"
   ],
   "modules-right": [
+    "custom/server",
     "pulseaudio",
     "network",
     "bluetooth",
@@ -46,6 +47,14 @@
     "format": "Settings",
     "tooltip-format": "RGLauncher settings and software updates",
     "on-click": "rglauncher settings"
+  },
+  "custom/server": {
+    "exec": "rglauncher servers status --waybar",
+    "return-type": "json",
+    "format": "{text}",
+    "interval": 2,
+    "tooltip": true,
+    "on-click": "rglauncher servers"
   },
   "hyprland/workspaces": {
     "format": "{name}",

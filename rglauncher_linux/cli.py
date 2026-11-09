@@ -57,7 +57,7 @@ def doctor():
             backend['shared_libraries_available'] = False
     return {'product': 'RGLauncher: Linux Edition', 'version': __version__,
             'required_commands': required, 'python_modules': modules,
-            'optional_commands': {n: shutil.which(n) for n in ('amixer', 'code-oss', 'code', 'rofi')},
+            'optional_commands': {n: shutil.which(n) for n in ('amixer', 'code-oss', 'code', 'rofi', 'ssh')},
             'toolkits': toolkits, 'waybar_backend': backend,
             'session': {'wayland': bool(os.environ.get('WAYLAND_DISPLAY')),
                         'hyprland': bool(os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'))},
@@ -101,6 +101,8 @@ def _main(argv=None):
     for name in [*APPS, 'files', 'terminal']:
         p = sub.add_parser(name); p.add_argument('arguments', nargs=argparse.REMAINDER)
     sub.add_parser('settings')
+    p=sub.add_parser('servers');p.add_argument('action',nargs='?',default='open',choices=('open','status'))
+    p.add_argument('--waybar',action='store_true')
     p = sub.add_parser('desktop'); p.add_argument('action', choices=('refresh',))
     p = sub.add_parser('editor'); p.add_argument('action', choices=('install',))
     p.add_argument('--variant', choices=('night','opaque','day'), default='night')
@@ -119,6 +121,9 @@ def _main(argv=None):
     if args.command == 'settings':
         from .settings import main as settings_main
         return settings_main()
+    if args.command == 'servers':
+        from .servers import status,open_window
+        return status(args.waybar) if args.action=='status' else open_window()
     if args.command == 'desktop':
         from .install import reconcile_current
         result = reconcile_current(activate=True)

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=RGLauncher Servers
+Comment=Live diagnostics over existing SSH connections
+Exec=rglauncher servers
+TryExec=rglauncher
+Icon=aether-computer
+Terminal=false
+Categories=System;Monitor;
+Keywords=SSH;VPS;servers;diagnostics;fleet;
