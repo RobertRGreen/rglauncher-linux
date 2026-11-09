@@ -146,7 +146,7 @@ class ThemeTests(unittest.TestCase):
                 self.assertFalse(name.startswith("/") or ".." in Path(name).parts)
                 self.assertFalse(any(part in ("__pycache__", "previews", "tests", "dist", "node_modules") for part in Path(name).parts))
                 self.assertNotIn(Path(name).suffix, (".py", ".js", ".ts", ".sh", ".woff", ".ttf"))
-                self.assertNotIn(b"/home/robert", archive.read(name))
+                self.assertNotRegex(archive.read(name), rb"/(?:home|Users)/[^/\s\"<>]+/")
             manifest = ET.fromstring(archive.read("extension.vsixmanifest"))
             namespace = {"v": "http://schemas.microsoft.com/developer/vsx-schema/2011"}
             identity = manifest.find("v:Metadata/v:Identity", namespace)

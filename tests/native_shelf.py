@@ -53,7 +53,10 @@ def main():
         overlays = [entry for entry in visible if entry[1] == '3']
         assert len(overlays) == 1 and overlays[0][0] == output, overlays
         monitor = next(m for m in monitors if m['name'] == output)
-        assert overlays[0][2]['y'] >= monitor['y']+monitor['height']/monitor['scale']-100
+        bar=overlays[0][2]
+        bottom=monitor['y']+monitor['height']/monitor['scale']
+        assert abs(bar['y']+bar['h']-(bottom-12)) <= 2
+        assert bar['w'] < monitor['width']/monitor['scale'], 'Shelf must be bounded rather than edge-to-edge'
         assert data('activewindow').get('address') == active, 'Shelf stole application focus'
         assert {m['name']: m['reserved'] for m in monitors} == {m['name']: m['reserved'] for m in data('monitors')}
         control('hide'); time.sleep(.2)

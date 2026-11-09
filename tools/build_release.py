@@ -25,16 +25,16 @@ BIN = ('rglauncher', 'rglauncher-shelf', 'rofi-launcher', 'hypr-windows', 'calc-
        '_aether_material.py', '_cyber_theme.py', '_cyber_gtk.py', '_cyber_particles.py',
        '_aether_desktop.py', '_aether_tokens.json', '_audiobus.py', '_audioeq.py',
        '_audioeq_ui.py', '_scarlett.py', '_wifi_secondary.py')
-MODULES = ('__init__.py', 'cli.py', 'native.py', 'paths.py', 'shelf.py', 'update.py', 'install.py', 'settings.py', 'editor.py')
+MODULES = ('__init__.py', 'cli.py', 'native.py', 'paths.py', 'shelf.py', 'shelf_design.py', 'update.py', 'install.py', 'settings.py', 'editor.py')
 DOCS = ('build-release.md', 'native-theme.md', 'updates.md', 'vscode-theme.md',
         'component-provenance.json', 'installation.md', 'session.md', 'dependencies.md',
-        'software.md', 'hyprland-session.md', 'releasing.md')
+        'software.md', 'hyprland-session.md', 'releasing.md', 'shelf-design.md', 'shelf-icons.md', 'control-room.md')
 SYSTEMD = ('rglauncher-update.service', 'rglauncher-update.timer', 'rglauncher-shelf@.service',
            'rglauncher-session@.target')
 DESKTOP = ('apps', 'files', 'calc', 'audio', 'settings', 'terminal', 'windows', 'wifi', 'bt')
 ICON_SOURCES = ('generate.py', 'outline-symbolic.cpp', 'palette.json', 'render.py', 'verify.py', 'LICENSE', 'README.md')
 TESTS = ('test_build_release.py', 'test_update.py', 'test_install.py', 'test_native.py', 'test_editor.py',
-         'test_shelf.py', 'test_audio_initialization.py', 'test_product_defaults.py', 'native_shelf.py', 'native_render.py')
+         'test_shelf.py', 'test_shelf_design.py', 'test_control_room.py', 'test_audio_initialization.py', 'test_product_defaults.py', 'native_shelf.py', 'native_render.py')
 CONTEXTS = {'actions', 'apps', 'categories', 'devices', 'emblems', 'mimetypes', 'places', 'status'}
 NAME = re.compile(r'[a-z0-9][a-z0-9.-]*\Z')
 REQUIRED = ('LICENSE', 'THIRD_PARTY_NOTICES', 'share/instrument-score-aether/tokens.json',
@@ -71,6 +71,10 @@ def select_files(root: Path, kind: str):
              'packaging/waybar/LICENSE.Waybar'}
     names.update('bin/'+n for n in BIN)
     names.update('rglauncher_linux/'+n for n in MODULES)
+    names.add('docs/images/shelf.png')
+    names.update('assets/shelf-icons/aether-'+n+suffix+'.svg' for n in
+                 ('library','folder','development','window','document-code','calculator','audio-console','home')
+                 for suffix in ('','-light'))
     names.update('docs/'+n for n in DOCS)
     names.update('systemd/'+n for n in SYSTEMD)
     names.update('share/applications/rglauncher-'+n+'.desktop' for n in DESKTOP)
@@ -103,6 +107,8 @@ def select_files(root: Path, kind: str):
             required_icons.update('assets/icons/'+n for n in ICON_SOURCES)
             required_icons.update('tools/'+n for n in ('build_release.py', 'build_icons.py', 'sign_release.py'))
     if kind == 'source':
+        names.add('tools/build_shelf_icons.py')
+        names.add('tools/render_shelf.py')
         names.add('.github/workflows/ci.yml')
         names.discard('share/waybar/waybar'); names.discard('share/waybar/backend.json')
         names.update('assets/icons/'+n for n in ICON_SOURCES)

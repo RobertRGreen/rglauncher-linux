@@ -8,13 +8,13 @@ public feed implied by these commands.
 ## Runtime artifact
 
 ```sh
-python3 -B tools/build_release.py --kind binary --version 0.2.0-alpha.2 \
+python3 -B tools/build_release.py --kind binary --version 0.2.0-alpha.3 \
   --architecture x86_64 --output /path/to/new-output
 ```
 
 The output directory must not already exist. It contains:
 
-- `rglauncher-linux-0.2.0-alpha.2-linux-x86_64.tar.gz`: flat-root runtime archive.
+- `rglauncher-linux-0.2.0-alpha.3-linux-x86_64.tar.gz`: flat-root runtime archive.
 - `payload/`: exact unpacked files used to construct the archive.
 - `inventory.json`: sorted path/size/SHA-256/normalized-mode inventory.
 - `release-metadata.json`: artifact digest/size, compatibility, version and count.
@@ -53,11 +53,11 @@ license are in assets/icons/. Regenerate both full themes:
 ```sh
 python3 assets/icons/generate.py
 python3 tools/build_icons.py assets/icons/generated/registry.json share/icons
-python3 -B tools/build_release.py --kind source --version 0.2.0-alpha.2 \
+python3 -B tools/build_release.py --kind source --version 0.2.0-alpha.3 \
   --output /path/to/new-source-output
 ```
 
-The source archive is named `rglauncher-linux-0.2.0-alpha.2-source.tar.gz`. It adds
+The source archive is named `rglauncher-linux-0.2.0-alpha.3-source.tar.gz`. It adds
 the exact original icon sources/generated registry/SVGs, release/icon/signing
 tools, curated native patches/build recipe, VS Code regeneration sources, named
 verification tests and Arch recipe. It omits the
@@ -79,9 +79,9 @@ to produce an unsigned manifest. File URLs are supported only for deliberate
 local trust tests; do not publish a development file feed as a public channel.
 
 ```sh
-python3 -B tools/build_release.py --kind binary --version 0.2.0-alpha.2 \
+python3 -B tools/build_release.py --kind binary --version 0.2.0-alpha.3 \
   --architecture x86_64 --output /path/to/new-publisher-output \
-  --artifact-url https://YOUR-REAL-HOST/releases/rglauncher-linux-0.2.0-alpha.2-linux-x86_64.tar.gz \
+  --artifact-url https://YOUR-REAL-HOST/releases/rglauncher-linux-0.2.0-alpha.3-linux-x86_64.tar.gz \
   --issued-at ACTUAL_UNIX_ISSUANCE --expires-at ACTUAL_UNIX_EXPIRY
 python3 tools/sign_release.py sign \
   --document /path/to/new-publisher-output/manifest.unsigned.json \

@@ -72,7 +72,7 @@ class ShelfState:
         return now-self.outside_since >= grace
 
 
-def in_shelf_region(monitor, cursor, height=88):
+def in_shelf_region(monitor, cursor, height=116):
     x, y, width, screen_height = logical_geometry(monitor)
     return x <= cursor['x'] < x+width and y+screen_height-height <= cursor['y'] <= y+screen_height
 
@@ -131,12 +131,12 @@ class ShelfManager:
         # explicit export step. Distributed releases always contain bin/.
         if not (component_dir/'_aether_desktop.py').exists():
             sys.path.append(str(Path.home()/'.local/bin'))
-        from _aether_desktop import adapted_bar
-        config = adapted_bar(self._base(), monitor)
+        from .shelf_design import compose
+        config = compose(self._base(), monitor)
         config.update({'position': 'bottom', 'layer': 'overlay', 'exclusive': False,
                        'passthrough': False, 'start_hidden': True,
                        'on-sigusr1': 'toggle', 'on-sigusr2': 'reload',
-                       'margin-top': 0, 'margin-bottom': 8})
+                       'margin-top': 0, 'margin-bottom': 12})
         # A preset such as dock overrides the global layer/exclusive settings.
         # Default mode uses our explicit overlay and zero-reservation settings.
         config.pop('mode', None)
@@ -155,8 +155,8 @@ class ShelfManager:
         # User styles stay intact. A final owned rule guarantees that Waybar's
         # mapped, click-through invisible mode is actually transparent.
         style = self.runtime/'shelf.css'
-        style.write_text('@import url("'+Path(self.style).resolve().as_uri()+'");\n'
-                         'window#waybar.hidden { opacity: 0; }\n')
+        from .shelf_design import stylesheet
+        style.write_text('@import url("'+Path(self.style).resolve().as_uri()+'");\n'+stylesheet())
         child = subprocess.Popen([self.binary, '-c', str(self._child_config(monitor)), '-s', str(style)],
                                  env=env, stdout=self.log, stderr=self.log)
         self.children[name] = child
@@ -410,12 +410,75 @@ def session_available():
         return False
 
 
+def tool_tabs(config):
+    """Pure chooser model. Existing user commands are never executed on read."""
+    names={'cpu':('Processor','system'),'memory':('Memory','computer'),'custom/gpu':('Graphics','graphics'),
+           'custom/opencam':('Camera','camera'),'custom/vrdesk':('VR desktop','cast'),
+           'battery':('Battery','battery'),'image#rgl-terminal':('Terminal','development'),
+           'image#rgl-code':('Code editor','document-code'),'image#rgl-calc':('Calculator','calculator'),
+           'image#rgl-home':('Home Control Protocol','home')}
+    rows=[]
+    root=Path(__file__).resolve().parents[1]
+    visited=set()
+    def flatten(keys):
+        for key in keys:
+            if key in visited:continue
+            visited.add(key)
+            if key.startswith('group/'):
+                yield from flatten(config.get(key,{}).get('modules',[]))
+            else:yield key
+    for key in flatten(config.get('rgl-tool-items',[])):
+        if key.startswith('hyprland/'):continue
+        data=config.get(key,{})
+        title,icon=names.get(key,(key.split('/')[-1].replace('rgl-','').replace('#',' ').replace('-',' ').title(),'utilities'))
+        try:
+            from .shelf_design import icon_path
+            visual=str(icon_path(icon,root,32))
+        except ValueError:visual='applications-utilities'
+        if key.startswith('image#rgl-'):
+            title={'terminal':'Terminal','code':'Code editor','calc':'Calculator','home':'Home Control Protocol'}.get(key.split('rgl-')[-1],title)
+        for action,suffix,description in [('on-click','','Open this instrument'),('on-click-right',' · alternate action','Existing right-click action'),
+                                         ('on-click-middle',' · middle-click action','Existing middle-click action')]:
+            if data.get(action):
+                rows.append((visual,title+suffix,data[action],{'description':description,'kind':'Shelf instrument'}))
+    return [('Instruments',rows)]
+
+
+def show_tools():
+    from .editor import load_jsonc
+    from .shelf_design import compose
+    root=Path(__file__).resolve().parents[1]
+    sys.path.insert(0,str(root/'bin'))
+    from _aether_score import run
+    config_home=Path(os.environ.get('XDG_CONFIG_HOME',str(Path.home()/'.config')))
+    base=load_jsonc((config_home/'waybar/config.jsonc').read_text())
+    monitors=hypr_json('monitors')
+    monitor=next((m for m in monitors if m.get('focused')),monitors[0])
+    tabs=tool_tabs(compose(base,monitor))
+    with open(runtime_dir()/'tools.lock','a') as lock:
+        try:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0
+        run('Shelf instruments',tabs,lambda command:subprocess.Popen(['sh','-c',command],start_new_session=True),
+            'Type to search · ↑/↓ select · Enter open · Escape returns to your workspace')
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', nargs='?', default='run', choices=('run', 'show', 'hide', 'status', 'reload', 'stop', 'probe'))
+    parser.add_argument('command', nargs='?', default='run', choices=('run', 'show', 'hide', 'status', 'reload', 'stop', 'probe','tools','format-status'))
     parser.add_argument('--output'); parser.add_argument('--hold', type=float, default=0)
     parser.add_argument('--binary'); parser.add_argument('--config'); parser.add_argument('--style')
     args = parser.parse_args(argv)
+    if args.command == 'format-status':
+        from .shelf_design import clean_status
+        for line in sys.stdin:
+            if len(line)>65536:raise ValueError('Status exceeds its limit')
+            print(json.dumps(clean_status(json.loads(line),args.output)),flush=True)
+        return 0
+    if args.command == 'tools':
+        return show_tools()
     if args.command == 'probe':
         return 0 if session_available() else 1
     if args.command != 'run':

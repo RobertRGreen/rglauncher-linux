@@ -31,6 +31,14 @@ thirds. Alt+Tab changes focus away from a game's active pointer constraint.
 See [session setup and exact shortcuts](docs/hyprland-session.md). Installing the
 software does not replace an existing compositor configuration.
 
+![Instrument/Score Aether shelf specimen](docs/images/shelf.png)
+
+GTK visual specimen with sample values; actual Waybar behavior is verified separately.
+
+The shelf now uses a bounded deck with dimensional instrument icons, compact
+workspace context and a searchable tools chooser. See [the visual and interaction
+construction](docs/shelf-design.md) and [Control Room](docs/control-room.md).
+
 ## Try the command surface
 
 The target is a Wayland session using Hyprland's 0.56 Lua API. Install distribution
@@ -68,7 +76,7 @@ explains signatures, the pinned key, channels, activation order and rollback.
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 tools/build_release.py --kind binary --version 0.2.0-alpha.2 \
+python3 tools/build_release.py --kind binary --version 0.2.0-alpha.3 \
   --output /path/to/new-output
 ```
 
