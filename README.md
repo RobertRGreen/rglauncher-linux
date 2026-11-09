@@ -10,6 +10,11 @@ separate from the Windows Edition. Its original shell, theme, icons, calculator,
 audio interface and update client are free software. System applications and
 libraries keep their own licenses.
 
+![Original Instrument/Score Aether icons rendered at 32 pixels](docs/images/icons.png)
+
+Original SVG icon contact sheet rendered with librsvg. This is a generic asset
+specimen, not a screenshot of an installed desktop.
+
 Included software provides:
 
 - An application launcher and window overview with explicit scope and search.
@@ -81,3 +86,14 @@ Native surface details and bounded test limits are in
 [VS Code themes](docs/vscode-theme.md). The project does not claim that private
 web canvases, every toolkit or every hardware configuration automatically follows
 the theme. Third-party application rendering remains under its owner's control.
+
+![Static RGLauncher Aether Night editor workbench specimen](docs/images/editor-night.png)
+
+Static workbench specimen generated from the VS Code theme's colors and original
+SVG file icons. It illustrates the visual language; it is not a running-editor
+capture or proof of every extension's rendering.
+
+[Maintainer releases and public CI](docs/releasing.md) explains source checks,
+native backend verification, protected signing, artifact-first publication and
+manual signing-key rotation. CI checks source and theme data; it does not sign
+or publish desktop updates.

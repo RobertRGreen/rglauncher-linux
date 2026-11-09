@@ -2,7 +2,9 @@
 
 RGLauncher: Linux Edition updates its own per-user software releases. It does not restart Hyprland, replace distribution packages or overwrite user configuration. Existing processes keep running; new launches select the activated release through the stable wrappers. Wrappers must resolve the current release once per launch and disable bytecode writes in that managed tree.
 
-The initial development installation uses an **explicit local signed file feed**. There is no claimed public update endpoint until a publisher creates and verifies one. `rglauncher update status` and Settings show the configured feed, channel, current/previous version, pinned-key fingerprint and any rollback hold or last error. A local channel is not described as a live public service.
+The alpha.2 publisher channel is `https://raw.githubusercontent.com/RobertRGreen/rglauncher-linux/main/updates/prerelease.json`, backed by signed GitHub release artifacts. Initial development used an explicit local signed file feed; the deployed channel uses HTTPS with `allow_file: false`. `rglauncher update status` reports the actual feed, channel, current/previous version, pinned-key fingerprint, rollback hold and last error. The Control Room shows the channel/current/previous version and provides check/install/rollback actions; use the CLI for full trust diagnostics.
+
+The initial publisher key is `share/update-keys/rglauncher-2026.pub`. CLI `trusted_key_sha256` hashes the raw 32-byte Ed25519 key: `6b0174d7b3971efae51447aaac4d8ad16c1ecea8fbfba47f9cd1b92da53b60b4`. The SHA-256 over its PEM **file bytes** is `20507e6951b03677b115f657aa681cf299751b36d61dfd3fc61d6f3e5ed1521d`. These describe the same key in different representations. Establish publisher trust independently before installation; an update feed cannot replace the pinned key.
 
 ## Client commands
 
@@ -104,4 +106,4 @@ python3 -m unittest discover -s tests -p test_update.py -v
 
 Tests create temporary keys/feeds outside the source tree and exercise real signed local update, post-verification fixture execution and rollback while a user-config sentinel remains unchanged. Adversarial cases include signatures/digests, JSON ambiguity/types, expiry/replay, SemVer/channels/high-water/rollback hold, transport redirects, path traversal, link/device/extension/sparse/duplicate/incomplete archives, decompression limits, mutation after preflight, modified receipts/trees, locks, and interrupted activation recovery. They use no network, foreground desktop or physical device actions.
 
-This validates the implemented protocol and deterministic failure paths. Live HTTPS hosting/certificates, public key distribution, production systemd behavior and full hardware/session operation remain deployment acceptance tasks. Source review and automated tests are not an independent security certification.
+Alpha.2 deployment checks additionally passed a fresh HTTPS-only signed bootstrap, downloaded runtime/source archive hashes, actual per-user integration, two-output shelf readiness and a production systemd timer invocation. An actual alpha.1→alpha.2 isolated upgrade/rollback/automatic-hold/manual-reapply preserved its user-configuration sentinel. Physical hotplug, broad hardware/session coverage and independent usability/security studies remain separate work.

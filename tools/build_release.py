@@ -28,7 +28,7 @@ BIN = ('rglauncher', 'rglauncher-shelf', 'rofi-launcher', 'hypr-windows', 'calc-
 MODULES = ('__init__.py', 'cli.py', 'native.py', 'paths.py', 'shelf.py', 'update.py', 'install.py', 'settings.py', 'editor.py')
 DOCS = ('build-release.md', 'native-theme.md', 'updates.md', 'vscode-theme.md',
         'component-provenance.json', 'installation.md', 'session.md', 'dependencies.md',
-        'software.md', 'hyprland-session.md')
+        'software.md', 'hyprland-session.md', 'releasing.md')
 SYSTEMD = ('rglauncher-update.service', 'rglauncher-update.timer', 'rglauncher-shelf@.service',
            'rglauncher-session@.target')
 DESKTOP = ('apps', 'files', 'calc', 'audio', 'settings', 'terminal', 'windows', 'wifi', 'bt')
@@ -65,6 +65,7 @@ def select_files(root: Path, kind: str):
              'share/waybar/style.css', 'share/waybar/backend.json', 'share/waybar/waybar',
              'share/waybar/LICENSE.Waybar', 'share/vscode/rglauncher-aether.vsix',
              'share/update-keys/rglauncher-2026.pub',
+             'docs/images/icons.png', 'docs/images/editor-night.png',
              'share/hyprland/hyprland.lua', 'share/hyprland/window-navigation.lua',
              'share/hyprland/snap-layout.lua', 'share/hyprland/README.md',
              'packaging/waybar/LICENSE.Waybar'}
@@ -102,6 +103,7 @@ def select_files(root: Path, kind: str):
             required_icons.update('assets/icons/'+n for n in ICON_SOURCES)
             required_icons.update('tools/'+n for n in ('build_release.py', 'build_icons.py', 'sign_release.py'))
     if kind == 'source':
+        names.add('.github/workflows/ci.yml')
         names.discard('share/waybar/waybar'); names.discard('share/waybar/backend.json')
         names.update('assets/icons/'+n for n in ICON_SOURCES)
         names.update('tools/'+n for n in ('build_release.py', 'build_icons.py', 'sign_release.py'))
